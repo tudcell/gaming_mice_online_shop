@@ -1,0 +1,77 @@
+.mouseDetails {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 40px;
+    background-color: #ffffff;
+    min-height: 100vh;
+}
+
+.mouseDetails h1 {
+    font-size: 32px;
+    font-family: "Georgia", serif;
+    color: #000000;
+    margin-bottom: 10px;
+}
+
+.mouseDetails img {
+    width: 50%;
+    max-width: 500px;
+    border-radius: 10px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+    margin: 20px 0;
+}
+
+.mouseDetails h3 {
+    font-size: 22px;
+    color: #775c47;
+}
+
+.mouseDetails p {
+    font-size: 18px;
+    color: #333;
+    max-width: 600px;
+    line-height: 1.6;
+}
+
+@media (max-width: 768px) {
+    .mouseDetails img {
+        width: 80%;
+    }
+
+    .mouseDetails h1 {
+        font-size: 28px;
+    }
+
+    .mouseDetails p {
+        font-size: 16px;
+    }
+}
+
+
+.mouseDetails button {
+    background-color: #b0aeae;
+    border: none;
+    color: #000000;
+    padding: 15px 32px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    margin: 4px 2px;
+    cursor: pointer;
+    border-radius: 12px;
+    transition: background-color 0.3s ease, transform 0.3s ease;
+}
+
+.mouseDetails button:hover {
+    background-color: #6e6e6e;
+    transform: scale(1.05);
+}
+
+.message {
+    color: green;
+    font-size: 16px;
+    margin-top: 10px;
+}
