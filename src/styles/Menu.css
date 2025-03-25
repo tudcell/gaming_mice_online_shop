@@ -6,7 +6,6 @@
     align-items: center;
     flex-direction: column;
 }
-
 .menu .menuTitle {
     font-family: cursive;
     font-size: 60px;
@@ -20,23 +19,25 @@
     place-items: center;
 }
 
+/* MENU ITEM STYLING */
 .menuItem {
-    position: relative;
     border-radius: 15px;
     width: 300px;
     height: 350px;
     margin: 20px;
     box-shadow: 0px 3px 15px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
-
 .menuItem:hover {
     box-shadow: 0px 3px 15px rgba(0, 0, 0, 0.5);
     transition: 0.3s ease-in;
     cursor: pointer;
 }
 
-.menuItem div {
-    position: relative;
+/* IMAGE CONTAINER */
+.menuItemImage {
     border-top-left-radius: 15px;
     border-top-right-radius: 15px;
     width: 100%;
@@ -46,9 +47,31 @@
     background-size: cover;
 }
 
-.menuItem h1,
-.menuItem p {
-    margin-left: 20px;
+/* TEXT CONTAINER for title and price */
+.menuItemText {
+    display: flex;
+    flex-direction: column;
+    height: 150px; /* Adjusted to fill the remaining space */
+    padding: 10px 20px;
+    gap: 5px; /* Separates title and price */
+}
+
+/* Title styles: Truncate after three lines */
+.menuItemText h1 {
+    margin: 0;
+    text-align: center;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    overflow: hidden;
+    white-space: normal;
+}
+
+/* Price styles: pushed to the bottom */
+.menuItemText p {
+    margin: 0;
+    text-align: center;
+    margin-top: auto; /* Ensures the price stays at the bottom */
 }
 
 @media only screen and (max-width: 1300px) {
@@ -63,54 +86,83 @@
     }
 }
 
+
 .plusButton {
     position: absolute;
     bottom: 10px;
     right: 10px;
     background-color: rgb(138, 137, 132);
-    color: white;
+    color: #fff;
     border: none;
     padding: 8px 12px;
     border-radius: 50%;
     font-size: 18px;
     cursor: pointer;
+    transition: background-color 0.3s ease-in;
 }
 
 .plusButton:hover {
     background-color: rgb(3, 21, 15);
 }
 
-.menuImage {
-    position: relative;
-    width: 100%;
-    height: 200px;
-    background-position: center;
-    background-repeat: no-repeat;
-    background-size: cover;
-    border-top-left-radius: 15px;
-    border-top-right-radius: 15px;
-}
 
-
-.filters {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 20px;
-    padding: 0 40px;
-    width: 70vw;
-}
-
-
-.filters label {
-    display: flex;
-    align-items: center;
-    font-weight: bold;
-}
-
-.filters input,
-.filters select {
+.price-label {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.8em;
     margin-left: 10px;
-    padding: 5px;
-    border-radius: 5px;
-    border: 1px solid #ccc;
+    color: #fff;
+}
+
+.label-green {
+    background-color: green;
+}
+
+.label-yellow {
+    background-color: goldenrod;
+}
+
+.label-red {
+    background-color: red;
+}
+
+
+.charts-container {
+    display: flex;
+    flex-direction: row;
+    gap: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.chart-item {
+    flex: 1;
+    min-width: 300px;
+    max-width: 600px;
+}
+
+
+.pagination {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.pagination button {
+    background-color: #e0e0e0;
+    border: none;
+    padding: 8px 12px;
+    margin: 0 5px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.pagination button:hover {
+    background-color: #ff8f00;
+}
+
+.pagination .active-page {
+    background-color: #121619;
+    color: #fff;
 }

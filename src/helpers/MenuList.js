@@ -35,5 +35,35 @@ export const MenuList = [
         image: ModelO,
         price: 549.99,
         details: 'The Glorious Model O is a wired gaming mouse that has a 12,000 DPI sensor, 6 programmable buttons, and a lightweight honeycomb design. It also features Glorious\'s Ascended Cord for minimal drag. The mouse is designed for both right and left-handed users and has an ambidextrous design, making it ideal for fast-paced games. The Glorious Model O is compatible with both Windows and Mac computers.'
+    },
+    {
+        name: "SteelSeries Rival 3",
+        image: ViperV3,
+        price: 399.99,
+        details: 'A wired gaming mouse with a high-accuracy sensor, customizable RGB lighting, and durable construction.'
+    },
+    {
+        name: "Corsair Harpoon RGB Pro",
+        image: ViperV3,
+        price: 449.99,
+        details: 'A wireless gaming mouse offering high accuracy, ergonomic design and customizable RGB lighting.'
+    },
+    {
+        name: "Razer Naga X",
+        image: ViperV3,
+        price: 599.99,
+        details: 'An ergonomic gaming mouse with multiple programmable buttons, designed primarily for MMO gamers.'
+    },
+    {
+        name: "Cooler Master MM710",
+        image: ViperV3,
+        price: 479.99,
+        details: 'An ultra-lightweight wireless gaming mouse featuring a honeycomb shell and excellent tracking performance.'
+    },
+    {
+        name: "HyperX Pulsefire Haste",
+        image: ViperV3,
+        price: 529.99,
+        details: 'A wired gaming mouse designed for speed, featuring a lightweight design and a 16,000 DPI sensor.'
     }
 ];
