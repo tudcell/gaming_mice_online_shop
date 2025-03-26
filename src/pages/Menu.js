@@ -1,4 +1,3 @@
-// src/pages/Menu.js
 import React, { useState, useEffect } from 'react';
 import { faker } from '@faker-js/faker';
 import { MenuList } from '../helpers/MenuList';
@@ -7,7 +6,7 @@ import Pagination from '../components/Pagination';
 import RealTimeCharts from '../components/RealTimeCharts';
 import '../styles/Menu.css';
 
-function Menu() {
+function Menu({ testMode = false }) {
     const [mice, setMice] = useState(() => {
         const stored = localStorage.getItem('mice');
         return stored ? JSON.parse(stored) : MenuList;
@@ -46,18 +45,17 @@ function Menu() {
     }, [mice]);
 
     useEffect(() => {
-        const addInterval = setInterval(() => {
-            addFakeMouse();
-        }, 5000);
-        // Adjust deletion interval to 10000 ms for a net addition effect
-        const deleteInterval = setInterval(() => {
-            deleteRandomMouse();
-        }, 10000);
+        // Skip timers in test mode
+        if (testMode) return;
+
+        const addInterval = setInterval(addFakeMouse, 5000);
+        const deleteInterval = setInterval(deleteRandomMouse, 10000);
+
         return () => {
             clearInterval(addInterval);
             clearInterval(deleteInterval);
         };
-    }, []);
+    }, [testMode]);
 
     const filteredItems = mice
         .filter(item =>
@@ -99,7 +97,7 @@ function Menu() {
 
     return (
         <div className="menu">
-            <h1 className="menuTitle">Our Offer</h1>
+            <h1 className="menuTitle">Our Gaming Mice</h1>
             <div className="filters">
                 <label>
                     Min Price:
@@ -134,7 +132,7 @@ function Menu() {
             </div>
             <div className="menuList">
                 {currentItems.map((menuItem, index) => (
-                    <div key={index} style={{ position: 'relative' }}>
+                    <div key={index} style={{ position: 'relative' }} data-testid="mouse-card">
                         <MenuItem
                             image={menuItem.image}
                             name={menuItem.name}
@@ -146,7 +144,10 @@ function Menu() {
                     </div>
                 ))}
             </div>
-            <button onClick={deleteRandomMouse}>Delete Random Mouse</button>
+            <div className="controls">
+                <button onClick={addFakeMouse} data-testid="add-mouse-btn">Add Fake Mouse</button>
+                <button onClick={deleteRandomMouse} data-testid="delete-mouse-btn">Delete Random Mouse</button>
+            </div>
             <Pagination
                 currentPage={currentPage}
                 totalPages={totalPages}

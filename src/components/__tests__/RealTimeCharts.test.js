@@ -2,6 +2,13 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import RealTimeCharts from '../RealTimeCharts';
 
+// Mock Chart.js components
+jest.mock('react-chartjs-2', () => ({
+    Pie: () => <canvas data-testid="pie-chart" role="img" />,
+    Bar: () => <canvas data-testid="bar-chart" role="img" />,
+    Line: () => <canvas data-testid="line-chart" role="img" />
+}));
+
 // Sample items for testing
 const items = [
     { name: 'BrandA Product', price: 100 },
@@ -17,9 +24,10 @@ describe('RealTimeCharts component', () => {
         expect(screen.getByText(/Total Price per Brand \(Line Chart\)/)).toBeInTheDocument();
     });
 
-    test('renders chart canvases in the charts\-container', () => {
+    test('renders chart canvases in the charts-container', () => {
         render(<RealTimeCharts items={items} />);
-        const canvases = screen.getAllByRole('img', { hidden: true });
-        expect(canvases.length).toBeGreaterThanOrEqual(3);
+        expect(screen.getByTestId('pie-chart')).toBeInTheDocument();
+        expect(screen.getByTestId('bar-chart')).toBeInTheDocument();
+        expect(screen.getByTestId('line-chart')).toBeInTheDocument();
     });
 });

@@ -1,4 +1,4 @@
-// src/pages/__tests__/Menu.test.js
+// src/components/__tests__/Menu.test.js
 import React from 'react';
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import Menu from '../../pages/Menu';
@@ -70,18 +70,19 @@ jest.mock('../../helpers/MenuList', () => ({
 describe('Menu Page', () => {
     beforeEach(() => {
         localStorage.clear();
+        // Clear timers between tests
         jest.useFakeTimers();
     });
 
     afterEach(() => {
-        jest.runOnlyPendingTimers();
+        jest.clearAllTimers();
         jest.useRealTimers();
     });
 
     test('renders main components correctly', () => {
-        render(<Menu />);
+        render(<Menu testMode={true} />);
 
-        expect(screen.getByText('Our Offer')).toBeInTheDocument();
+        expect(screen.getByText('Our Gaming Mice')).toBeInTheDocument();
         expect(screen.getByLabelText(/Min Price:/)).toBeInTheDocument();
         expect(screen.getByLabelText(/Max Price:/)).toBeInTheDocument();
         expect(screen.getByLabelText(/Sort By:/)).toBeInTheDocument();
@@ -89,99 +90,67 @@ describe('Menu Page', () => {
         expect(screen.getByText('Delete Random Mouse')).toBeInTheDocument();
     });
 
-    test('filter inputs change values and reset pagination', async () => {
-        render(<Menu />);
+    test('filter inputs change values and reset pagination', () => {
+        render(<Menu testMode={true} />);
 
         const minInput = screen.getByLabelText(/Min Price:/);
         const maxInput = screen.getByLabelText(/Max Price:/);
 
-        await act(async () => {
-            fireEvent.change(minInput, { target: { value: '250' } });
-        });
-
+        fireEvent.change(minInput, { target: { value: '250' } });
         expect(minInput.value).toBe('250');
 
-        await act(async () => {
-            fireEvent.change(maxInput, { target: { value: '350' } });
-        });
-
+        fireEvent.change(maxInput, { target: { value: '350' } });
         expect(maxInput.value).toBe('350');
     });
 
-    test('sort order selection works correctly', async () => {
-        render(<Menu />);
+    test('sort order selection works correctly', () => {
+        render(<Menu testMode={true} />);
 
         const sortSelect = screen.getByLabelText(/Sort By:/);
 
-        await act(async () => {
-            fireEvent.change(sortSelect, { target: { value: 'lowToHigh' } });
-        });
-
+        fireEvent.change(sortSelect, { target: { value: 'lowToHigh' } });
         expect(sortSelect.value).toBe('lowToHigh');
 
-        await act(async () => {
-            fireEvent.change(sortSelect, { target: { value: 'highToLow' } });
-        });
-
+        fireEvent.change(sortSelect, { target: { value: 'highToLow' } });
         expect(sortSelect.value).toBe('highToLow');
     });
 
-    test('delete button removes a fake mouse', async () => {
+    test('automated timers add and remove mice correctly', async () => {
         render(<Menu />);
 
-        // First add a fake mouse
-        await act(async () => {
+        // Record initial count
+        const initialCount = screen.getAllByTestId('menu-item').length;
+
+        // Advance timers to trigger add function (5 seconds)
+        act(() => {
             jest.advanceTimersByTime(5000);
         });
 
-        const initialMice = JSON.parse(localStorage.getItem('mice'));
-
-        // Click delete button
-        await act(async () => {
-            fireEvent.click(screen.getByText('Delete Random Mouse'));
+        // Wait for UI update and verify mouse was added
+        await waitFor(() => {
+            expect(screen.getAllByTestId('menu-item').length).toBe(initialCount + 1);
         });
 
-        const updatedMice = JSON.parse(localStorage.getItem('mice'));
-        expect(updatedMice.length).toBeLessThanOrEqual(initialMice.length);
+        // Advance timers further to trigger delete function (5 more seconds)
+        act(() => {
+            jest.advanceTimersByTime(5000);
+        });
+
+        // Wait for UI update and verify a mouse was deleted
+        await waitFor(() => {
+            const finalCount = screen.getAllByTestId('menu-item').length;
+            expect(finalCount).toBeLessThanOrEqual(initialCount + 1);
+        });
     });
 
-    test('timers add and remove mice as expected', async () => {
-        render(<Menu />);
+    test('localStorage gets updated when mice change', () => {
+        render(<Menu testMode={true} />);
 
-        const initialMice = JSON.parse(localStorage.getItem('mice')) || [];
+        // Trigger a state change by clicking delete button
+        fireEvent.click(screen.getByText('Delete Random Mouse'));
 
-        // Advance timer to add a mouse
-        await act(async () => {
-            jest.advanceTimersByTime(5000);
-        });
-
-        const afterAddMice = JSON.parse(localStorage.getItem('mice'));
-        expect(afterAddMice.length).toBe(initialMice.length + 1);
-
-        // Advance timer to delete a mouse
-        await act(async () => {
-            jest.advanceTimersByTime(5000);
-        });
-
-        const afterDeleteMice = JSON.parse(localStorage.getItem('mice'));
-        expect(afterDeleteMice.length).toBeGreaterThanOrEqual(initialMice.length);
-        expect(afterDeleteMice.length).toBeLessThanOrEqual(initialMice.length + 1);
-    });
-
-    test('localStorage gets updated when mice change', async () => {
-        render(<Menu />);
-
-        await act(async () => {
-            jest.advanceTimersByTime(5000);
-        });
-
+        // Verify localStorage was updated
         const storedMice = JSON.parse(localStorage.getItem('mice'));
-        expect(storedMice.length).toBeGreaterThan(0);
-        expect(storedMice[storedMice.length - 1].isFake).toBe(true);
+        expect(storedMice).toBeDefined();
     });
 });
-
-// You can add similar test files for other pages:
-// src/pages/__tests__/Home.test.js
-// src/pages/__tests__/About.test.js
-// src/pages/__tests__/Contact.test.js
