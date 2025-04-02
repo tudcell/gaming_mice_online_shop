@@ -118,25 +118,24 @@ describe('Menu Page', () => {
     test('automated timers add and remove mice correctly', async () => {
         render(<Menu />);
 
-        // Record initial count
+
         const initialCount = screen.getAllByTestId('menu-item').length;
 
-        // Advance timers to trigger add function (5 seconds)
         act(() => {
             jest.advanceTimersByTime(5000);
         });
 
-        // Wait for UI update and verify mouse was added
+
         await waitFor(() => {
             expect(screen.getAllByTestId('menu-item').length).toBe(initialCount + 1);
         });
 
-        // Advance timers further to trigger delete function (5 more seconds)
+
         act(() => {
             jest.advanceTimersByTime(5000);
         });
 
-        // Wait for UI update and verify a mouse was deleted
+
         await waitFor(() => {
             const finalCount = screen.getAllByTestId('menu-item').length;
             expect(finalCount).toBeLessThanOrEqual(initialCount + 1);

@@ -1,3 +1,4 @@
+// Modification to your Menu component
 import React, { useState, useEffect } from 'react';
 import { faker } from '@faker-js/faker';
 import { MenuList } from '../helpers/MenuList';
@@ -15,7 +16,9 @@ function Menu({ testMode = false }) {
     const [minPrice, setMinPrice] = useState('');
     const [sortOrder, setSortOrder] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 6;
+    const [isGenerating, setIsGenerating] = useState(true);
+    const [itemsPerPage, setItemsPerPage] = useState(6); // Default items per page
+
 
     const addFakeMouse = () => {
         const newMouse = {
@@ -40,13 +43,23 @@ function Menu({ testMode = false }) {
         });
     };
 
+    const toggleGeneration = () => {
+        setIsGenerating(prev => !prev);
+    };
+
+    // Handler for changing items per page
+    const handleItemsPerPageChange = (e) => {
+        const newItemsPerPage = parseInt(e.target.value);
+        setItemsPerPage(newItemsPerPage);
+        setCurrentPage(1); //
+    };
+
     useEffect(() => {
         localStorage.setItem('mice', JSON.stringify(mice));
     }, [mice]);
 
     useEffect(() => {
-        // Skip timers in test mode
-        if (testMode) return;
+        if (testMode || !isGenerating) return;
 
         const addInterval = setInterval(addFakeMouse, 5000);
         const deleteInterval = setInterval(deleteRandomMouse, 10000);
@@ -55,7 +68,7 @@ function Menu({ testMode = false }) {
             clearInterval(addInterval);
             clearInterval(deleteInterval);
         };
-    }, [testMode]);
+    }, [testMode, isGenerating]);
 
     const filteredItems = mice
         .filter(item =>
@@ -125,11 +138,16 @@ function Menu({ testMode = false }) {
                         <option value="highToLow">Price: High to Low</option>
                     </select>
                 </label>
+                <label>
+                    Items Per Page:
+                    <select value={itemsPerPage} onChange={handleItemsPerPageChange} data-testid="items-per-page">
+                        <option value="2">2</option>
+                        <option value="4">4</option>
+                        <option value="6">6</option>
+                    </select>
+                </label>
             </div>
-            <div className="charts">
-                <h2>Mice Metrics</h2>
-                <RealTimeCharts items={filteredItems} />
-            </div>
+
             <div className="menuList">
                 {currentItems.map((menuItem, index) => (
                     <div key={index} style={{ position: 'relative' }} data-testid="mouse-card">
@@ -147,6 +165,17 @@ function Menu({ testMode = false }) {
             <div className="controls">
                 <button onClick={addFakeMouse} data-testid="add-mouse-btn">Add Fake Mouse</button>
                 <button onClick={deleteRandomMouse} data-testid="delete-mouse-btn">Delete Random Mouse</button>
+                <button
+                    onClick={toggleGeneration}
+                    data-testid="toggle-generation-btn"
+                    className={isGenerating ? "active" : ""}
+                >
+                    {isGenerating ? "Stop Auto Generation" : "Start Auto Generation"}
+                </button>
+            </div>
+            <div className="charts">
+                <h2>Mice Metrics</h2>
+                <RealTimeCharts items={filteredItems} />
             </div>
             <Pagination
                 currentPage={currentPage}
