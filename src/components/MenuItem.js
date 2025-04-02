@@ -4,8 +4,14 @@ import { useNavigate } from 'react-router-dom';
 function MenuItem({ image, name, price, details, minPrice, maxPrice }) {
     const navigate = useNavigate();
 
+    // Construct full image URL if it's a relative path
+    const imageUrl = image?.startsWith('http')
+        ? image
+        : `http://localhost:5000${image}`;
+
     const handleClick = () => {
-        navigate('/mouseDetails', { state: { mouse: { name, price, details, image } } });
+        // Pass the corrected image URL in the state
+        navigate('/mouseDetails', { state: { mouse: { name, price, details, image: imageUrl } } });
     };
 
     const getPriceLabel = (price) => {
@@ -22,7 +28,7 @@ function MenuItem({ image, name, price, details, minPrice, maxPrice }) {
 
     return (
         <div className="menuItem">
-            <div className="menuItemImage" style={{ backgroundImage: `url(${image})` }}>
+            <div className="menuItemImage" style={{ backgroundImage: `url(${imageUrl})` }}>
                 <button className="plusButton" onClick={handleClick}>+</button>
             </div>
             <div className="menuItemText">
@@ -30,8 +36,8 @@ function MenuItem({ image, name, price, details, minPrice, maxPrice }) {
                 <p>
                     ${price}{' '}
                     <span className={`price-label ${getPriceLabel(price)}`}>
-            {getLabelText(price)}
-          </span>
+                        {getLabelText(price)}
+                    </span>
                 </p>
             </div>
         </div>

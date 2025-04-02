@@ -9,6 +9,7 @@ import Contact from './pages/Contact';
 import MouseDetails from './pages/MouseDetails';
 import Cart from './pages/Cart';
 import { CartProvider } from './context/CartContext';
+import AdminPanel from './pages/AdminPanel';
 
 function App() {
     return (
@@ -22,6 +23,7 @@ function App() {
                         <Route exact path="/about" element={<About />} />
                         <Route exact path="/contact" element={<Contact />} />
                         <Route path="/mouseDetails" element={<MouseDetails />} />
+                        <Route path="/admin" element = {<AdminPanel />} />
                         <Route path="/cart" element={<Cart />} />
                     </Routes>
                 </Router>

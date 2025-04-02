@@ -1,62 +1,107 @@
-// Modification to your Menu component
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { faker } from '@faker-js/faker';
-import { MenuList } from '../helpers/MenuList';
 import MenuItem from '../components/MenuItem';
 import Pagination from '../components/Pagination';
 import RealTimeCharts from '../components/RealTimeCharts';
 import '../styles/Menu.css';
 
 function Menu({ testMode = false }) {
-    const [mice, setMice] = useState(() => {
-        const stored = localStorage.getItem('mice');
-        return stored ? JSON.parse(stored) : MenuList;
-    });
+    const [mice, setMice] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [maxPrice, setMaxPrice] = useState('');
     const [minPrice, setMinPrice] = useState('');
     const [sortOrder, setSortOrder] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
-    const [isGenerating, setIsGenerating] = useState(true);
-    const [itemsPerPage, setItemsPerPage] = useState(6); // Default items per page
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [itemsPerPage, setItemsPerPage] = useState(6);
+    const [isInitialLoad, setIsInitialLoad] = useState(true);
 
+    // Memoize the fetch function to prevent unnecessary re-creation
+    const fetchMice = useCallback(async (min = '', max = '', sort = '') => {
+        if (testMode) return;
 
-    const addFakeMouse = () => {
-        const newMouse = {
-            name: `${faker.company.name()} ${faker.commerce.productName()}`,
-            image: faker.image.urlLoremFlickr(640, 480, 'technics', true),
-            price: parseFloat(faker.commerce.price(100, 1000, 2)),
-            details: faker.lorem.paragraph(),
-            isFake: true
-        };
-        setMice(prev => [...prev, newMouse]);
-    };
+        try {
+            // Only show loading indicator on initial load
+            if (isInitialLoad) {
+                setLoading(true);
+            }
 
-    const deleteRandomMouse = () => {
-        setMice(prev => {
-            const fakeMiceIndices = prev
-                .map((item, index) => (item.isFake ? index : -1))
-                .filter(index => index !== -1);
-            if (fakeMiceIndices.length === 0) return prev;
-            const randomIndex = fakeMiceIndices[Math.floor(Math.random() * fakeMiceIndices.length)];
-            console.log(`Deleting mouse at index ${randomIndex}`);
-            return prev.filter((_, index) => index !== randomIndex);
-        });
-    };
+            const params = new URLSearchParams();
+            if (min) params.append('minPrice', min);
+            if (max) params.append('maxPrice', max);
+            if (sort) params.append('sortOrder', sort);
 
-    const toggleGeneration = () => {
-        setIsGenerating(prev => !prev);
-    };
+            const response = await fetch(`http://localhost:5000/api/mice?${params}`);
+            if (!response.ok) throw new Error('Network response was not ok');
 
-    // Handler for changing items per page
-    const handleItemsPerPageChange = (e) => {
-        const newItemsPerPage = parseInt(e.target.value);
-        setItemsPerPage(newItemsPerPage);
-        setCurrentPage(1); //
-    };
+            const data = await response.json();
+            setMice(data);
+        } catch (error) {
+            console.error('Error fetching mice:', error);
+            setMice([]);
+        } finally {
+            setLoading(false);
+            setIsInitialLoad(false);
+        }
+    }, [testMode, isInitialLoad]);
 
+    // Initial load
     useEffect(() => {
-        localStorage.setItem('mice', JSON.stringify(mice));
-    }, [mice]);
+        fetchMice();
+    }, [fetchMice]);
+
+    // Handle filter changes with debounce
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            fetchMice(minPrice, maxPrice, sortOrder);
+        }, 500);
+
+        return () => clearTimeout(handler);
+    }, [minPrice, maxPrice, sortOrder, fetchMice]);
+
+    const addFakeMouse = async () => {
+        try {
+            const newMouse = {
+                name: `${faker.company.name()} ${faker.commerce.productName()}`,
+                image: faker.image.urlLoremFlickr({ category: 'technics', width: 640, height: 480 }),
+                price: parseFloat(faker.commerce.price({ min: 100, max: 1000, dec: 2 })),
+                details: faker.lorem.paragraph(),
+                isFake: true
+            };
+
+            const response = await fetch('http://localhost:5000/api/mice', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newMouse)
+            });
+
+            if (!response.ok) throw new Error('Failed to add mouse');
+
+            const savedMouse = await response.json();
+            setMice(prev => [...prev, savedMouse]);
+        } catch (error) {
+            console.error('Error adding fake mouse:', error);
+        }
+    };
+
+    const deleteRandomMouse = async () => {
+        try {
+            const fakeMice = mice.filter(mouse => mouse.isFake);
+            if (fakeMice.length === 0) return;
+
+            const randomMouse = fakeMice[Math.floor(Math.random() * fakeMice.length)];
+
+            const response = await fetch(`http://localhost:5000/api/mice/${randomMouse.id}`, {
+                method: 'DELETE'
+            });
+
+            if (!response.ok) throw new Error('Failed to delete mouse');
+
+            setMice(prev => prev.filter(mouse => mouse.id !== randomMouse.id));
+        } catch (error) {
+            console.error('Error deleting mouse:', error);
+        }
+    };
 
     useEffect(() => {
         if (testMode || !isGenerating) return;
@@ -68,26 +113,25 @@ function Menu({ testMode = false }) {
             clearInterval(addInterval);
             clearInterval(deleteInterval);
         };
-    }, [testMode, isGenerating]);
+    }, [isGenerating, testMode]);
 
-    const filteredItems = mice
-        .filter(item =>
-            (maxPrice === '' || item.price <= parseFloat(maxPrice)) &&
-            (minPrice === '' || item.price >= parseFloat(minPrice))
-        )
-        .sort((a, b) => {
-            if (sortOrder === 'lowToHigh') return a.price - b.price;
-            if (sortOrder === 'highToLow') return b.price - a.price;
-            return 0;
-        });
+    const toggleGeneration = () => {
+        setIsGenerating(prev => !prev);
+    };
 
-    const prices = filteredItems.map(item => item.price);
+    const handleItemsPerPageChange = (e) => {
+        const newItemsPerPage = parseInt(e.target.value);
+        setItemsPerPage(newItemsPerPage);
+        setCurrentPage(1);
+    };
+
+    const prices = mice.map(item => item.price);
     const minItemPrice = prices.length > 0 ? Math.min(...prices) : 0;
     const maxItemPrice = prices.length > 0 ? Math.max(...prices) : 0;
     const indexOfLast = currentPage * itemsPerPage;
     const indexOfFirst = indexOfLast - itemsPerPage;
-    const currentItems = filteredItems.slice(indexOfFirst, indexOfLast);
-    const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
+    const currentItems = mice.slice(indexOfFirst, indexOfLast);
+    const totalPages = Math.ceil(mice.length / itemsPerPage);
 
     const handleMaxPriceChange = (e) => {
         setMaxPrice(e.target.value);
@@ -107,6 +151,10 @@ function Menu({ testMode = false }) {
     const handlePageChange = (page) => {
         setCurrentPage(page);
     };
+
+    if (loading && isInitialLoad && !testMode) {
+        return <div className="loading">Loading mice...</div>;
+    }
 
     return (
         <div className="menu">
@@ -149,8 +197,8 @@ function Menu({ testMode = false }) {
             </div>
 
             <div className="menuList">
-                {currentItems.map((menuItem, index) => (
-                    <div key={index} style={{ position: 'relative' }} data-testid="mouse-card">
+                {currentItems.map((menuItem) => (
+                    <div key={menuItem.id || menuItem._id || Math.random()} style={{ position: 'relative' }} data-testid="mouse-card">
                         <MenuItem
                             image={menuItem.image}
                             name={menuItem.name}
@@ -175,7 +223,7 @@ function Menu({ testMode = false }) {
             </div>
             <div className="charts">
                 <h2>Mice Metrics</h2>
-                <RealTimeCharts items={filteredItems} />
+                <RealTimeCharts items={mice} />
             </div>
             <Pagination
                 currentPage={currentPage}

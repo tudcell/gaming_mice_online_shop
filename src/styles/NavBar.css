@@ -16,6 +16,11 @@
 
 .navbar .leftSide img {
     width: 70px;
+    transition: transform 0.2s ease;
+}
+
+.navbar .leftSide img:hover {
+    transform: scale(1.1);
 }
 
 .navbar .rightSide {
@@ -30,6 +35,12 @@
     color: white;
     text-decoration: none;
     margin: 20px;
+    transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.navbar a:hover {
+    color: #f85f00;
+    transform: translateY(-2px);
 }
 
 .navbar .rightSide button {
@@ -37,10 +48,22 @@
     border: none;
     color: white;
     cursor: pointer;
+    transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.navbar .rightSide button:hover {
+    color: #f85f00;
+    transform: scale(1.1);
 }
 
 .navbar .rightSide svg {
     font-size: 40px;
+    transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.navbar .rightSide svg:hover {
+    transform: scale(1.1);
+    color: #f85f00;
 }
 
 .navbar #open {
@@ -109,12 +132,10 @@
 
 .cart-icon svg {
     font-size: 30px;
-    transition: transform 0.2s ease-in-out;
+    transition: transform 0.2s ease-in-out, color 0.2s ease;
 }
 
 .cart-icon:hover svg {
     transform: scale(1.1);
     color: #f85f00;
 }
-
-
