@@ -1,163 +1,280 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { faker } from '@faker-js/faker';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import MenuItem from '../components/MenuItem';
-import Pagination from '../components/Pagination';
-import RealTimeCharts from '../components/RealTimeCharts';
+import StatusIndicator from '../components/StatusIndicator';
+import useOfflineSupport from '../hooks/useOfflineSupport';
 import '../styles/Menu.css';
 
 function Menu({ testMode = false }) {
     const [mice, setMice] = useState([]);
+    const [visibleMice, setVisibleMice] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [page, setPage] = useState(1);
+    const [hasMore, setHasMore] = useState(true);
     const [maxPrice, setMaxPrice] = useState('');
     const [minPrice, setMinPrice] = useState('');
     const [sortOrder, setSortOrder] = useState('');
-    const [currentPage, setCurrentPage] = useState(1);
-    const [isGenerating, setIsGenerating] = useState(false);
-    const [itemsPerPage, setItemsPerPage] = useState(6);
-    const [isInitialLoad, setIsInitialLoad] = useState(true);
+    const [debouncedMinPrice, setDebouncedMinPrice] = useState('');
+    const [debouncedMaxPrice, setDebouncedMaxPrice] = useState('');
+    const { isOnline, isServerUp } = useOfflineSupport();
+    const isOfflineMode = !isOnline || !isServerUp;
 
-    // Memoize the fetch function to prevent unnecessary re-creation
-    const fetchMice = useCallback(async (min = '', max = '', sort = '') => {
-        if (testMode) return;
+    // Configuration
+    const itemsPerPage = 6;
+    const loadingRef = useRef(false);
+    const scrollPosRef = useRef(0);
+    const allDataRef = useRef([]);
+    const observer = useRef(null);
+    const lastItemRef = useRef(null);
+    const firstItemRef = useRef(null);
+    const isMounted = useRef(true);
+
+    // Add mounted ref to prevent state updates after unmount
+    useEffect(() => {
+        isMounted.current = true;
+        return () => {
+            isMounted.current = false;
+        };
+    }, []);
+
+    // Debounce price filters
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            if (isMounted.current) {
+                setDebouncedMinPrice(minPrice);
+                setDebouncedMaxPrice(maxPrice);
+            }
+        }, 500);
+        return () => clearTimeout(handler);
+    }, [minPrice, maxPrice]);
+
+    // Apply filters locally
+    const applyFilters = useCallback((miceData) => {
+        if (!miceData) return [];
+
+        let filtered = [...miceData];
+
+        if (debouncedMinPrice) {
+            filtered = filtered.filter(m => m && m.price >= parseFloat(debouncedMinPrice));
+        }
+        if (debouncedMaxPrice) {
+            filtered = filtered.filter(m => m && m.price <= parseFloat(debouncedMaxPrice));
+        }
+        if (sortOrder === 'lowToHigh') {
+            filtered.sort((a, b) => (a?.price || 0) - (b?.price || 0));
+        } else if (sortOrder === 'highToLow') {
+            filtered.sort((a, b) => (b?.price || 0) - (a?.price || 0));
+        }
+
+        return filtered;
+    }, [debouncedMinPrice, debouncedMaxPrice, sortOrder]);
+
+    // Fetch initial mice with filters - with safety checks
+    const fetchInitialMice = useCallback(async () => {
+        if (testMode || !isMounted.current) return;
+
+        loadingRef.current = true;
+        if (isMounted.current) setLoading(true);
 
         try {
-            // Only show loading indicator on initial load
-            if (isInitialLoad) {
-                setLoading(true);
+            // Handle offline mode
+            if (isOfflineMode) {
+                let storedMice = [];
+                try {
+                    storedMice = JSON.parse(localStorage.getItem('cachedMice') || '[]');
+                } catch (err) {
+                    console.error('Error parsing cached mice:', err);
+                }
+
+                allDataRef.current = storedMice;
+                const filtered = applyFilters(storedMice);
+
+                if (isMounted.current) {
+                    setMice(filtered);
+                    setVisibleMice(filtered.slice(0, itemsPerPage));
+                    setHasMore(filtered.length > itemsPerPage);
+                    setPage(1);
+                }
+                return;
             }
 
+            // Build query parameters
             const params = new URLSearchParams();
-            if (min) params.append('minPrice', min);
-            if (max) params.append('maxPrice', max);
-            if (sort) params.append('sortOrder', sort);
+            if (debouncedMinPrice) params.append('minPrice', debouncedMinPrice);
+            if (debouncedMaxPrice) params.append('maxPrice', debouncedMaxPrice);
+            if (sortOrder) params.append('sortOrder', sortOrder);
 
-            const response = await fetch(`http://localhost:5000/api/mice?${params}`);
+            const response = await fetch(`http://localhost:5002/api/mice?${params}`);
             if (!response.ok) throw new Error('Network response was not ok');
 
             const data = await response.json();
-            setMice(data);
+
+            // Cache all data
+            try {
+                localStorage.setItem('cachedMice', JSON.stringify(data));
+            } catch (err) {
+                console.error('Error caching mice:', err);
+            }
+
+            allDataRef.current = data;
+
+            // Only update state if component is still mounted
+            if (isMounted.current) {
+                const filtered = applyFilters(data);
+                setMice(filtered);
+                setVisibleMice(filtered.slice(0, itemsPerPage));
+                setHasMore(filtered.length > itemsPerPage);
+                setPage(1);
+            }
         } catch (error) {
             console.error('Error fetching mice:', error);
-            setMice([]);
+
+            // Use cached data if available
+            let storedMice = [];
+            try {
+                storedMice = JSON.parse(localStorage.getItem('cachedMice') || '[]');
+            } catch (err) {
+                console.error('Error parsing cached mice:', err);
+            }
+
+            if (storedMice.length > 0 && isMounted.current) {
+                const filtered = applyFilters(storedMice);
+                setMice(filtered);
+                setVisibleMice(filtered.slice(0, itemsPerPage));
+                setHasMore(filtered.length > itemsPerPage);
+            }
         } finally {
-            setLoading(false);
-            setIsInitialLoad(false);
+            if (isMounted.current) setLoading(false);
+            loadingRef.current = false;
         }
-    }, [testMode, isInitialLoad]);
+    }, [testMode, debouncedMinPrice, debouncedMaxPrice, sortOrder, isOfflineMode, applyFilters, itemsPerPage]);
 
-    // Initial load
-    useEffect(() => {
-        fetchMice();
-    }, [fetchMice]);
+    // Load more mice when scrolling down - with safety checks
+    const loadMoreMice = useCallback(() => {
+        if (loadingRef.current || !hasMore || !isMounted.current) return;
 
-    // Handle filter changes with debounce
-    useEffect(() => {
-        const handler = setTimeout(() => {
-            fetchMice(minPrice, maxPrice, sortOrder);
-        }, 500);
+        loadingRef.current = true;
+        if (isMounted.current) setLoading(true);
 
-        return () => clearTimeout(handler);
-    }, [minPrice, maxPrice, sortOrder, fetchMice]);
-
-    const addFakeMouse = async () => {
         try {
-            const newMouse = {
-                name: `${faker.company.name()} ${faker.commerce.productName()}`,
-                image: faker.image.urlLoremFlickr({ category: 'technics', width: 640, height: 480 }),
-                price: parseFloat(faker.commerce.price({ min: 100, max: 1000, dec: 2 })),
-                details: faker.lorem.paragraph(),
-                isFake: true
-            };
+            const nextPage = page + 1;
+            const startIndex = (nextPage - 1) * itemsPerPage;
+            const endIndex = startIndex + itemsPerPage;
 
-            const response = await fetch('http://localhost:5000/api/mice', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(newMouse)
-            });
+            // Check if we have more items to show
+            if (startIndex >= mice.length) {
+                if (isMounted.current) setHasMore(false);
+                return;
+            }
 
-            if (!response.ok) throw new Error('Failed to add mouse');
+            // Get the next batch of items
+            const nextBatch = mice.slice(startIndex, endIndex);
 
-            const savedMouse = await response.json();
-            setMice(prev => [...prev, savedMouse]);
-        } catch (error) {
-            console.error('Error adding fake mouse:', error);
+            // Add them to visible mice
+            if (isMounted.current) {
+                setVisibleMice(prev => [...prev, ...nextBatch]);
+                setPage(nextPage);
+                setHasMore(endIndex < mice.length);
+            }
+        } finally {
+            if (isMounted.current) setLoading(false);
+            loadingRef.current = false;
         }
-    };
+    }, [hasMore, mice, page, itemsPerPage]);
 
-    const deleteRandomMouse = async () => {
-        try {
-            const fakeMice = mice.filter(mouse => mouse.isFake);
-            if (fakeMice.length === 0) return;
+    // Handle scrolling back to top - with safety check
+    const handleScroll = useCallback(() => {
+        if (!isMounted.current) return;
 
-            const randomMouse = fakeMice[Math.floor(Math.random() * fakeMice.length)];
+        const scrollPosition = window.scrollY;
+        const scrollDirection = scrollPosition < scrollPosRef.current ? 'up' : 'down';
+        scrollPosRef.current = scrollPosition;
 
-            const response = await fetch(`http://localhost:5000/api/mice/${randomMouse.id}`, {
-                method: 'DELETE'
-            });
-
-            if (!response.ok) throw new Error('Failed to delete mouse');
-
-            setMice(prev => prev.filter(mouse => mouse.id !== randomMouse.id));
-        } catch (error) {
-            console.error('Error deleting mouse:', error);
+        // When scrolling up and near the top, reset to initial items
+        if (scrollDirection === 'up' && scrollPosition < 200 && visibleMice.length > itemsPerPage) {
+            setVisibleMice(mice.slice(0, itemsPerPage));
+            setPage(1);
+            setHasMore(true);
         }
-    };
+    }, [mice, visibleMice.length, itemsPerPage]);
 
+    // Fetch mice when filters or sorting changes
     useEffect(() => {
-        if (testMode || !isGenerating) return;
+        fetchInitialMice();
+    }, [debouncedMinPrice, debouncedMaxPrice, sortOrder, fetchInitialMice]);
 
-        const addInterval = setInterval(addFakeMouse, 5000);
-        const deleteInterval = setInterval(deleteRandomMouse, 10000);
+    // Set up scroll listener for unloading on scroll up
+    useEffect(() => {
+        window.addEventListener('scroll', handleScroll);
+        return () => {
+            window.removeEventListener('scroll', handleScroll);
+        };
+    }, [handleScroll]);
+
+    // Set up intersection observer for infinite scrolling down - with safety checks
+    useEffect(() => {
+        // Clean up previous observer if it exists
+        if (observer.current) {
+            observer.current.disconnect();
+        }
+
+        const options = {
+            root: null,
+            rootMargin: '20px',
+            threshold: 0.1
+        };
+
+        observer.current = new IntersectionObserver((entries) => {
+            if (entries[0]?.isIntersecting && !loadingRef.current && hasMore && isMounted.current) {
+                loadMoreMice();
+            }
+        }, options);
+
+        if (lastItemRef.current) {
+            observer.current.observe(lastItemRef.current);
+        }
 
         return () => {
-            clearInterval(addInterval);
-            clearInterval(deleteInterval);
+            if (observer.current) {
+                observer.current.disconnect();
+                observer.current = null;
+            }
         };
-    }, [isGenerating, testMode]);
+    }, [hasMore, loadMoreMice, visibleMice]);
 
-    const toggleGeneration = () => {
-        setIsGenerating(prev => !prev);
+    const resetFilters = () => {
+        setPage(1);
+        setHasMore(true);
     };
-
-    const handleItemsPerPageChange = (e) => {
-        const newItemsPerPage = parseInt(e.target.value);
-        setItemsPerPage(newItemsPerPage);
-        setCurrentPage(1);
-    };
-
-    const prices = mice.map(item => item.price);
-    const minItemPrice = prices.length > 0 ? Math.min(...prices) : 0;
-    const maxItemPrice = prices.length > 0 ? Math.max(...prices) : 0;
-    const indexOfLast = currentPage * itemsPerPage;
-    const indexOfFirst = indexOfLast - itemsPerPage;
-    const currentItems = mice.slice(indexOfFirst, indexOfLast);
-    const totalPages = Math.ceil(mice.length / itemsPerPage);
 
     const handleMaxPriceChange = (e) => {
         setMaxPrice(e.target.value);
-        setCurrentPage(1);
+        resetFilters();
     };
 
     const handleMinPriceChange = (e) => {
         setMinPrice(e.target.value);
-        setCurrentPage(1);
+        resetFilters();
     };
 
     const handleSortOrderChange = (e) => {
         setSortOrder(e.target.value);
-        setCurrentPage(1);
+        resetFilters();
     };
 
-    const handlePageChange = (page) => {
-        setCurrentPage(page);
-    };
-
-    if (loading && isInitialLoad && !testMode) {
+    if (loading && visibleMice.length === 0) {
         return <div className="loading">Loading mice...</div>;
     }
 
     return (
         <div className="menu">
+            <StatusIndicator isOnline={isOnline} isServerUp={isServerUp} />
+
+            {isOfflineMode && (
+                <div className="offline-alert">
+                    <p>Currently working in offline mode. Changes will sync when connection is restored.</p>
+                </div>
+            )}
+
             <h1 className="menuTitle">Our Gaming Mice</h1>
             <div className="filters">
                 <label>
@@ -186,50 +303,42 @@ function Menu({ testMode = false }) {
                         <option value="highToLow">Price: High to Low</option>
                     </select>
                 </label>
-                <label>
-                    Items Per Page:
-                    <select value={itemsPerPage} onChange={handleItemsPerPageChange} data-testid="items-per-page">
-                        <option value="2">2</option>
-                        <option value="4">4</option>
-                        <option value="6">6</option>
-                    </select>
-                </label>
             </div>
 
             <div className="menuList">
-                {currentItems.map((menuItem) => (
-                    <div key={menuItem.id || menuItem._id || Math.random()} style={{ position: 'relative' }} data-testid="mouse-card">
-                        <MenuItem
-                            image={menuItem.image}
-                            name={menuItem.name}
-                            price={menuItem.price}
-                            details={menuItem.details}
-                            minPrice={minItemPrice}
-                            maxPrice={maxItemPrice}
-                        />
-                    </div>
-                ))}
+                {visibleMice.length > 0 ? (
+                    visibleMice.map((menuItem, index) => {
+                        if (!menuItem) return null;
+
+                        // Check if this is the last item
+                        const isLastItem = index === visibleMice.length - 1;
+                        // Check if this is the first item
+                        const isFirstItem = index === 0;
+
+                        return (
+                            <div
+                                key={menuItem.id || menuItem._id || `menu-${index}`}
+                                ref={isLastItem ? lastItemRef : isFirstItem ? firstItemRef : null}
+                            >
+                                <MenuItem
+                                    id={menuItem.id || menuItem._id}
+                                    image={menuItem.image}
+                                    name={menuItem.name}
+                                    price={menuItem.price}
+                                    details={menuItem.details}
+                                />
+                            </div>
+                        );
+                    })
+                ) : (
+                    <div className="no-mice">No mice available</div>
+                )}
             </div>
-            <div className="controls">
-                <button onClick={addFakeMouse} data-testid="add-mouse-btn">Add Fake Mouse</button>
-                <button onClick={deleteRandomMouse} data-testid="delete-mouse-btn">Delete Random Mouse</button>
-                <button
-                    onClick={toggleGeneration}
-                    data-testid="toggle-generation-btn"
-                    className={isGenerating ? "active" : ""}
-                >
-                    {isGenerating ? "Stop Auto Generation" : "Start Auto Generation"}
-                </button>
-            </div>
-            <div className="charts">
-                <h2>Mice Metrics</h2>
-                <RealTimeCharts items={mice} />
-            </div>
-            <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={handlePageChange}
-            />
+
+            {loading && visibleMice.length > 0 && <p className="loading-more">Loading more...</p>}
+            {!hasMore && visibleMice.length > itemsPerPage && (
+                <p className="total-count">Showing {visibleMice.length} of {mice.length} mice</p>
+            )}
         </div>
     );
 }

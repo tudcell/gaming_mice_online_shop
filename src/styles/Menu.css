@@ -5,10 +5,13 @@
     justify-content: center;
     align-items: center;
     flex-direction: column;
+    padding: 20px 0;
 }
+
 .menu .menuTitle {
     font-family: cursive;
     font-size: 60px;
+    margin-bottom: 30px;
 }
 
 .menuList {
@@ -17,6 +20,7 @@
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
     place-items: center;
+    gap: 20px;
 }
 
 /* MENU ITEM STYLING */
@@ -29,7 +33,9 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    position: relative; /* Important for absolute positioning of the plus button */
 }
+
 .menuItem:hover {
     box-shadow: 0px 3px 15px rgba(0, 0, 0, 0.5);
     transition: 0.3s ease-in;
@@ -42,18 +48,40 @@
     border-top-right-radius: 15px;
     width: 100%;
     height: 200px;
-    background-position: center;
-    background-repeat: no-repeat;
-    background-size: cover;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Fix for image display */
+.menuItemImage img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Fallback for image errors */
+.image-fallback {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f0f0f0;
+    color: #666;
+    font-size: 48px;
+    font-weight: bold;
 }
 
 /* TEXT CONTAINER for title and price */
 .menuItemText {
     display: flex;
     flex-direction: column;
-    height: 150px; /* Adjusted to fill the remaining space */
+    height: 150px;
     padding: 10px 20px;
-    gap: 5px; /* Separates title and price */
+    gap: 5px;
 }
 
 /* Title styles: Truncate after three lines */
@@ -71,9 +99,58 @@
 .menuItemText p {
     margin: 0;
     text-align: center;
-    margin-top: auto; /* Ensures the price stays at the bottom */
+    margin-top: auto;
+    font-size: 18px;
+    font-weight: bold;
+    color: #4a90e2;
 }
 
+/* Plus button styling - positioned at the bottom right of the menu item */
+.plusButton {
+    position: absolute;
+    bottom: 15px;
+    right: 15px;
+    width: 36px;
+    height: 36px;
+    background-color: rgb(138, 137, 132);
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.3s ease-in, transform 0.2s ease;
+    z-index: 10; /* Ensure it appears above other content */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.plusButton:hover {
+    background-color: rgb(3, 21, 15);
+    transform: scale(1.1);
+}
+
+/* Cart notification */
+.add-cart-notification {
+    position: fixed;
+    bottom: -60px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #4CAF50;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 5px;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+    transition: bottom 0.3s ease-in-out;
+    z-index: 1000;
+}
+
+.add-cart-notification.show {
+    bottom: 20px;
+}
+
+/* Responsive design */
 @media only screen and (max-width: 1300px) {
     .menuList {
         grid-template-columns: 1fr 1fr;
@@ -84,153 +161,66 @@
     .menuList {
         grid-template-columns: 1fr;
     }
+
+    .menu .menuTitle {
+        font-size: 40px;
+    }
 }
 
-
-.plusButton {
-    position: absolute;
-    bottom: 10px;
-    right: 10px;
-    background-color: rgb(138, 137, 132);
-    color: #fff;
-    border: none;
-    padding: 8px 12px;
-    border-radius: 50%;
-    font-size: 18px;
-    cursor: pointer;
-    transition: background-color 0.3s ease-in;
-}
-
-.plusButton:hover {
-    background-color: rgb(3, 21, 15);
-}
-
-
-.price-label {
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 0.8em;
-    margin-left: 10px;
-    color: #fff;
-}
-
-.label-green {
-    background-color: green;
-}
-
-.label-yellow {
-    background-color: goldenrod;
-}
-
-.label-red {
-    background-color: red;
-}
-
-
-.charts-container {
-    display: flex;
-    flex-direction: row;
-    gap: 20px;
-    flex-wrap: wrap;
-    justify-content: center;
-}
-
-.chart-item {
-    flex: 1;
-    min-width: 300px;
-    max-width: 600px;
-}
-
-
-.pagination {
-    display: flex;
-    justify-content: center;
-    margin-top: 20px;
-}
-
-.pagination button {
-    background-color: #e0e0e0;
-    border: none;
-    padding: 8px 12px;
-    margin: 0 5px;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-}
-
-.pagination button:hover {
-    background-color: #ff8f00;
-}
-
-.pagination .active-page {
-    background-color: #121619;
-    color: #fff;
-}
-
-/* Fix for image display issues */
-.menuItemImage img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-/* Fix for controls alignment */
-.controls {
-    display: flex;
-    justify-content: center;
-    gap: 1rem;
-    margin: 1.5rem 0;
-}
-
-.controls button {
-    padding: 0.5rem 1rem;
-    border-radius: 4px;
-    background-color: #4a90e2;
-    color: white;
-    border: none;
-    cursor: pointer;
-    transition: background-color 0.3s;
-}
-
-.controls button:hover {
-    background-color: #3a7bc8;
-}
-
-/* Fix for filters section */
+/* Filters section */
 .filters {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
     align-items: center;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
+    gap: 20px;
+    margin-bottom: 30px;
+    width: 80%;
+    max-width: 800px;
 }
 
 .filters label {
     display: flex;
     flex-direction: column;
-    gap: 0.3rem;
+    gap: 5px;
+    font-weight: 500;
 }
 
 .filters input,
 .filters select {
-    padding: 0.5rem;
-    border-radius: 4px;
-    border: 1px solid #ccc;
+    padding: 10px;
+    border-radius: 5px;
+    border: 1px solid #ddd;
+    min-width: 120px;
 }
 
-.filters button {
-    padding: 0.5rem 1rem;
-    border-radius: 4px;
-    background-color: #4a90e2;
-    color: white;
-    border: none;
-    cursor: pointer;
-}
-
-/* Loading indicator */
-.loading {
-    margin: 2rem;
-    font-size: 1.5rem;
+/* Loading states */
+.loading, .loading-more, .no-more-items {
+    margin: 20px 0;
     text-align: center;
+    color: #666;
+}
+
+.loading {
+    font-size: 1.5rem;
+}
+
+.offline-alert {
+    background-color: #fff3cd;
+    color: #856404;
+    padding: 15px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+    text-align: center;
+    width: 80%;
+    max-width: 800px;
+    border: 1px solid #ffeeba;
+}
+
+.no-mice {
+    width: 100%;
+    padding: 40px 0;
+    text-align: center;
+    font-size: 18px;
+    color: #666;
 }

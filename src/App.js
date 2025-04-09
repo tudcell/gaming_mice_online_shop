@@ -23,11 +23,11 @@ function App() {
                         <Route exact path="/about" element={<About />} />
                         <Route exact path="/contact" element={<Contact />} />
                         <Route path="/mouseDetails" element={<MouseDetails />} />
-                        <Route path="/admin" element = {<AdminPanel />} />
+                        <Route path="/admin" element={<AdminPanel />} />
                         <Route path="/cart" element={<Cart />} />
                     </Routes>
+                    <Footer />
                 </Router>
-                <Footer />
             </CartProvider>
         </div>
     );

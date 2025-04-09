@@ -1,45 +1,66 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import React from "react";
+import { useNavigate } from "react-router-dom";
+import { CartContext } from "../context/CartContext";
+import { useContext } from "react";
 
-function MenuItem({ image, name, price, details, minPrice, maxPrice }) {
+function MenuItem({ image, name, price, details, id }) {
     const navigate = useNavigate();
+    const { addToCart } = useContext(CartContext);
 
-    // Construct full image URL if it's a relative path
-    const imageUrl = image?.startsWith('http')
-        ? image
-        : `http://localhost:5000${image}`;
+    // Create proper image URL for server-hosted images
+    const getImagePath = (imagePath) => {
+        if (!imagePath) return 'https://via.placeholder.com/150?text=No+Image';
+
+        // If the path already starts with http or https, use it directly
+        if (imagePath.startsWith('http')) return imagePath;
+
+        // Remove leading slash if present
+        const path = imagePath.startsWith('/') ? imagePath.substring(1) : imagePath;
+
+        // Return the URL pointing to your server
+        return `http://localhost:5002/${path}`;
+    };
+
+    const handleAddToCart = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const mouseItem = {
+            id: id || `${name}-${Date.now()}`,
+            name,
+            price: Number(price),
+            image: image, // Store original path
+            details
+        };
+
+        addToCart(mouseItem);
+    };
 
     const handleClick = () => {
-        // Pass the corrected image URL in the state
-        navigate('/mouseDetails', { state: { mouse: { name, price, details, image: imageUrl } } });
-    };
-
-    const getPriceLabel = (price) => {
-        if (price === minPrice) return 'label-green';
-        if (price === maxPrice) return 'label-red';
-        return 'label-yellow';
-    };
-
-    const getLabelText = (price) => {
-        if (price === minPrice) return 'Cheapest';
-        if (price === maxPrice) return 'Most Expensive';
-        return 'Mid Price';
+        navigate("/mouseDetails", {
+            state: {
+                mouse: { id, name, price, image, details }
+            }
+        });
     };
 
     return (
         <div className="menuItem">
-            <div className="menuItemImage" style={{ backgroundImage: `url(${imageUrl})` }}>
-                <button className="plusButton" onClick={handleClick}>+</button>
+            <div className="menuItemImage" onClick={handleClick}>
+                <img
+                    src={getImagePath(image)}
+                    alt={name}
+                    onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = 'https://via.placeholder.com/150?text=No+Image';
+                    }}
+                />
             </div>
             <div className="menuItemText">
                 <h1>{name}</h1>
-                <p>
-                    ${price}{' '}
-                    <span className={`price-label ${getPriceLabel(price)}`}>
-                        {getLabelText(price)}
-                    </span>
-                </p>
+                <p>${typeof price === 'number' ? price.toFixed(2) : price}</p>
             </div>
+            <button className="plusButton" onClick={handleAddToCart}>+</button>
         </div>
     );
 }

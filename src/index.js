@@ -10,6 +10,8 @@ root.render(
     </React.StrictMode>
 );
 
+// Register the service worker for offline navigation support
+//register();
 
 // If you want to start measuring performance in your app, pass a function
 // to log results (for example: reportWebVitals(console.log))
