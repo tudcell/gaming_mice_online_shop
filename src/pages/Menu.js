@@ -28,7 +28,7 @@ function Menu({ testMode = false }) {
     const firstItemRef = useRef(null);
     const isMounted = useRef(true);
 
-    // Add mounted ref to prevent state updates after unmount
+    // Prevent state updates after unmount
     useEffect(() => {
         isMounted.current = true;
         return () => {
@@ -50,7 +50,6 @@ function Menu({ testMode = false }) {
     // Apply filters locally
     const applyFilters = useCallback((miceData) => {
         if (!miceData) return [];
-
         let filtered = [...miceData];
 
         if (debouncedMinPrice) {
@@ -64,17 +63,15 @@ function Menu({ testMode = false }) {
         } else if (sortOrder === 'highToLow') {
             filtered.sort((a, b) => (b?.price || 0) - (a?.price || 0));
         }
-
         return filtered;
     }, [debouncedMinPrice, debouncedMaxPrice, sortOrder]);
 
-    // Fetch initial mice with filters - with safety checks
+    // Fetch initial mice with filters
     const fetchInitialMice = useCallback(async () => {
         if (testMode || !isMounted.current) return;
 
         loadingRef.current = true;
         if (isMounted.current) setLoading(true);
-
         try {
             // Handle offline mode
             if (isOfflineMode) {
@@ -84,10 +81,8 @@ function Menu({ testMode = false }) {
                 } catch (err) {
                     console.error('Error parsing cached mice:', err);
                 }
-
                 allDataRef.current = storedMice;
                 const filtered = applyFilters(storedMice);
-
                 if (isMounted.current) {
                     setMice(filtered);
                     setVisibleMice(filtered.slice(0, itemsPerPage));
@@ -96,28 +91,21 @@ function Menu({ testMode = false }) {
                 }
                 return;
             }
-
             // Build query parameters
             const params = new URLSearchParams();
             if (debouncedMinPrice) params.append('minPrice', debouncedMinPrice);
             if (debouncedMaxPrice) params.append('maxPrice', debouncedMaxPrice);
             if (sortOrder) params.append('sortOrder', sortOrder);
-
             const response = await fetch(`http://localhost:5002/api/mice?${params}`);
             if (!response.ok) throw new Error('Network response was not ok');
-
             const data = await response.json();
-
-            // Cache all data
+            // Cache data
             try {
                 localStorage.setItem('cachedMice', JSON.stringify(data));
             } catch (err) {
                 console.error('Error caching mice:', err);
             }
-
             allDataRef.current = data;
-
-            // Only update state if component is still mounted
             if (isMounted.current) {
                 const filtered = applyFilters(data);
                 setMice(filtered);
@@ -127,15 +115,12 @@ function Menu({ testMode = false }) {
             }
         } catch (error) {
             console.error('Error fetching mice:', error);
-
-            // Use cached data if available
             let storedMice = [];
             try {
                 storedMice = JSON.parse(localStorage.getItem('cachedMice') || '[]');
             } catch (err) {
                 console.error('Error parsing cached mice:', err);
             }
-
             if (storedMice.length > 0 && isMounted.current) {
                 const filtered = applyFilters(storedMice);
                 setMice(filtered);
@@ -148,28 +133,20 @@ function Menu({ testMode = false }) {
         }
     }, [testMode, debouncedMinPrice, debouncedMaxPrice, sortOrder, isOfflineMode, applyFilters, itemsPerPage]);
 
-    // Load more mice when scrolling down - with safety checks
+    // Load more mice when scrolling down
     const loadMoreMice = useCallback(() => {
         if (loadingRef.current || !hasMore || !isMounted.current) return;
-
         loadingRef.current = true;
         if (isMounted.current) setLoading(true);
-
         try {
             const nextPage = page + 1;
             const startIndex = (nextPage - 1) * itemsPerPage;
             const endIndex = startIndex + itemsPerPage;
-
-            // Check if we have more items to show
             if (startIndex >= mice.length) {
                 if (isMounted.current) setHasMore(false);
                 return;
             }
-
-            // Get the next batch of items
             const nextBatch = mice.slice(startIndex, endIndex);
-
-            // Add them to visible mice
             if (isMounted.current) {
                 setVisibleMice(prev => [...prev, ...nextBatch]);
                 setPage(nextPage);
@@ -181,15 +158,12 @@ function Menu({ testMode = false }) {
         }
     }, [hasMore, mice, page, itemsPerPage]);
 
-    // Handle scrolling back to top - with safety check
+    // Handle scroll to top resetting visible items
     const handleScroll = useCallback(() => {
         if (!isMounted.current) return;
-
         const scrollPosition = window.scrollY;
         const scrollDirection = scrollPosition < scrollPosRef.current ? 'up' : 'down';
         scrollPosRef.current = scrollPosition;
-
-        // When scrolling up and near the top, reset to initial items
         if (scrollDirection === 'up' && scrollPosition < 200 && visibleMice.length > itemsPerPage) {
             setVisibleMice(mice.slice(0, itemsPerPage));
             setPage(1);
@@ -197,12 +171,12 @@ function Menu({ testMode = false }) {
         }
     }, [mice, visibleMice.length, itemsPerPage]);
 
-    // Fetch mice when filters or sorting changes
+    // Fetch mice for filters and sorting
     useEffect(() => {
         fetchInitialMice();
     }, [debouncedMinPrice, debouncedMaxPrice, sortOrder, fetchInitialMice]);
 
-    // Set up scroll listener for unloading on scroll up
+    // Scroll listener
     useEffect(() => {
         window.addEventListener('scroll', handleScroll);
         return () => {
@@ -210,29 +184,24 @@ function Menu({ testMode = false }) {
         };
     }, [handleScroll]);
 
-    // Set up intersection observer for infinite scrolling down - with safety checks
+    // Intersection observer for infinite scrolling
     useEffect(() => {
-        // Clean up previous observer if it exists
         if (observer.current) {
             observer.current.disconnect();
         }
-
         const options = {
             root: null,
             rootMargin: '20px',
             threshold: 0.1
         };
-
         observer.current = new IntersectionObserver((entries) => {
             if (entries[0]?.isIntersecting && !loadingRef.current && hasMore && isMounted.current) {
                 loadMoreMice();
             }
         }, options);
-
         if (lastItemRef.current) {
             observer.current.observe(lastItemRef.current);
         }
-
         return () => {
             if (observer.current) {
                 observer.current.disconnect();
@@ -240,6 +209,42 @@ function Menu({ testMode = false }) {
             }
         };
     }, [hasMore, loadMoreMice, visibleMice]);
+
+    // WebSocket listener for real-time updates
+    useEffect(() => {
+        const ws = new WebSocket('ws://localhost:5002');
+        ws.onmessage = (event) => {
+            const message = JSON.parse(event.data);
+            if (message.type === 'NEW_MOUSE') {
+                const newMouse = message.data;
+                // Check filters
+                let qualifies = true;
+                if (debouncedMinPrice && newMouse.price < parseFloat(debouncedMinPrice)) {
+                    qualifies = false;
+                }
+                if (debouncedMaxPrice && newMouse.price > parseFloat(debouncedMaxPrice)) {
+                    qualifies = false;
+                }
+                // Update full dataset regardless of filtering so future filter/sort actions include the new mouse.
+                allDataRef.current = [...allDataRef.current, newMouse];
+                const filtered = applyFilters(allDataRef.current);
+                setMice(filtered);
+                // If the new mouse qualifies and user is near bottom, update visible mice.
+                if (qualifies) {
+                    const nearBottom = window.innerHeight + window.scrollY >= document.body.offsetHeight - 100;
+                    if (nearBottom) {
+                        const newPage = page + 1;
+                        setVisibleMice(filtered.slice(0, newPage * itemsPerPage));
+                        setPage(newPage);
+                        setHasMore(filtered.length > newPage * itemsPerPage);
+                    }
+                }
+            }
+        };
+        return () => {
+            ws.close();
+        };
+    }, [debouncedMinPrice, debouncedMaxPrice, applyFilters, page, itemsPerPage]);
 
     const resetFilters = () => {
         setPage(1);
@@ -309,12 +314,8 @@ function Menu({ testMode = false }) {
                 {visibleMice.length > 0 ? (
                     visibleMice.map((menuItem, index) => {
                         if (!menuItem) return null;
-
-                        // Check if this is the last item
                         const isLastItem = index === visibleMice.length - 1;
-                        // Check if this is the first item
                         const isFirstItem = index === 0;
-
                         return (
                             <div
                                 key={menuItem.id || menuItem._id || `menu-${index}`}
