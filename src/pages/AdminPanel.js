@@ -14,6 +14,7 @@ function AdminPanel() {
     const [offlineQueue, setOfflineQueue] = useState([]);
     const [selectedFile, setSelectedFile] = useState(null);
     const [uploading, setUploading] = useState(false);
+    const [isOffline, setIsOffline] = useState(!navigator.onLine);
 
     useEffect(() => {
         fetchMice();
@@ -42,6 +43,20 @@ function AdminPanel() {
         };
         return () => { socket.close(); };
     }, []);
+
+    useEffect(() => {
+        const handleOnline = () => {
+            setIsOffline(false);
+            syncOfflineChanges();
+        };
+        const handleOffline = () => setIsOffline(true);
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+        return () => {
+            window.removeEventListener('online', handleOnline);
+            window.removeEventListener('offline', handleOffline);
+        };
+    }, [offlineQueue]);
 
     const fetchMice = async () => {
         try {
@@ -185,12 +200,6 @@ function AdminPanel() {
         }
     };
 
-    useEffect(() => {
-        const handleOnline = () => { syncOfflineChanges(); };
-        window.addEventListener('online', handleOnline);
-        return () => { window.removeEventListener('online', handleOnline); };
-    }, [offlineQueue]);
-
     const handleEdit = (mouse) => {
         setEditingId(mouse.id);
         setFormData({
@@ -209,6 +218,11 @@ function AdminPanel() {
     return (
         <div className="admin-panel">
             <h1>Admin Panel</h1>
+            {isOffline && (
+                <div className="network-warning">
+                    Network/Server is down.
+                </div>
+            )}
             <h2>{editingId ? 'Edit Mouse' : 'Add New Mouse'}</h2>
             <div className="form-group">
                 <label>Upload File:</label>
@@ -230,23 +244,26 @@ function AdminPanel() {
                     <label>Details:</label>
                     <textarea name="details" value={formData.details} onChange={handleInputChange} required />
                 </div>
-
                 <div className="form-group">
                     <label>Image Path:</label>
                     <input type="text" name="image" value={formData.image} onChange={handleInputChange} required />
                 </div>
                 <div className="form-buttons">
-                    <button type="submit" disabled={loading}>{editingId ? 'Update Mouse' : 'Add Mouse'}</button>
-                    {editingId && <button type="button" onClick={cancelEdit} disabled={loading}>Cancel</button>}
+                    <button type="submit" disabled={loading}>
+                        {editingId ? 'Update Mouse' : 'Add Mouse'}
+                    </button>
+                    {editingId && (
+                        <button type="button" onClick={cancelEdit} disabled={loading}>
+                            Cancel
+                        </button>
+                    )}
                 </div>
             </form>
-
             <div className="delete-fake">
                 <button onClick={handleDeleteFakeMice} disabled={loading}>
                     Delete All Fake Mice
                 </button>
             </div>
-
             <h2>Mouse Inventory</h2>
             {loading ? (
                 <div className="loading">Loading...</div>
@@ -268,20 +285,25 @@ function AdminPanel() {
                                 <td>{mouse.name}</td>
                                 <td>${(parseFloat(mouse.price) || 0).toFixed(2)}</td>
                                 <td>
-                                    <button onClick={() => handleEdit(mouse)} disabled={loading}>Edit</button>
-                                    <button onClick={() => handleDelete(mouse.id)} disabled={loading}>Delete</button>
+                                    <button onClick={() => handleEdit(mouse)} disabled={loading}>
+                                        Edit
+                                    </button>
+                                    <button onClick={() => handleDelete(mouse.id)} disabled={loading}>
+                                        Delete
+                                    </button>
                                 </td>
                             </tr>
                         ))
                     ) : (
                         <tr>
-                            <td colSpan="4" className="no-data">No mice available</td>
+                            <td colSpan="4" className="no-data">
+                                No mice available
+                            </td>
                         </tr>
                     )}
                     </tbody>
                 </table>
             )}
-
             <h2>Mouse Data Charts</h2>
             <RealTimeCharts items={mice} />
             <RealTimeBarChart items={mice} />

@@ -1,3 +1,4 @@
+// File: src/pages/MouseDetails.js
 import React, { useContext, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { CartContext } from '../context/CartContext';
@@ -24,20 +25,22 @@ function MouseDetails() {
         );
     }
 
-    // Get image path safely
+    // Get image path safely with absolute URL from the server
     const getImagePath = () => {
         try {
             if (!mouse.image) return '';
-
-            // If already using /assets path, return as is
-            if (mouse.image.startsWith('/assets/')) {
+            // If the image path already starts with "http", return it as is
+            if (mouse.image.startsWith('http')) {
                 return mouse.image;
             }
-
-            // Otherwise, extract filename and create path
+            // Otherwise, prefix the image path with the server URL
+            if (mouse.image.startsWith('/assets/')) {
+                return `http://localhost:5002${mouse.image}`;
+            }
+            // If the image path is not in the proper format, extract the filename and create the path
             const parts = mouse.image.split('/');
             const filename = parts[parts.length - 1];
-            return `/assets/${filename}`;
+            return `http://localhost:5002/assets/${filename}`;
         } catch (error) {
             console.error("Error processing image path:", error);
             return '';
@@ -46,7 +49,6 @@ function MouseDetails() {
 
     const handleAddToCart = () => {
         try {
-            // Make sure price is a number and id is unique
             const mouseWithId = {
                 id: mouse.id || `${mouse.name}-${Date.now()}`,
                 name: mouse.name || 'Unknown Mouse',
@@ -54,10 +56,8 @@ function MouseDetails() {
                 image: imageError ? '' : getImagePath(),
                 details: mouse.details || ''
             };
-
             console.log("Adding to cart from MouseDetails:", mouseWithId);
             addToCart(mouseWithId);
-
             setMessage('Item added to cart!');
             setTimeout(() => setMessage(''), 3000);
         } catch (error) {

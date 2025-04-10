@@ -1,0 +1,303 @@
+[
+  {
+    "id": 1,
+    "name": "Razer Viper V3 Pro",
+    "image": "/assets/viperv3pro.avif",
+    "price": 159.99,
+    "details": "Wireless gaming mouse with 30K DPI optical sensor and 95-hour battery life"
+  },
+  {
+    "id": 2,
+    "name": "Logitech G Pro X Superlight",
+    "image": "/assets/viperv3pro.avif",
+    "price": 149.99,
+    "details": "Ultra-lightweight wireless gaming mouse weighing less than 63g with HERO 25K sensor"
+  },
+  {
+    "id": 3,
+    "name": "Pulsar X2 Mini",
+    "image": "/assets/viperv3pro.avif",
+    "price": 94.95,
+    "details": "Lightweight symmetrical mouse with PAW3395 sensor and ultra-flexible cable"
+  },
+  {
+    "id": 4,
+    "name": "SteelSeries Aerox 3 Wireless",
+    "image": "/assets/viperv3pro.avif",
+    "price": 99.99,
+    "details": "Ultra-lightweight (68g) honeycomb design with dual wireless connectivity"
+  },
+  {
+    "id": 5,
+    "name": "Glorious Model O",
+    "image": "/assets/viperv3pro.avif",
+    "price": 59.99,
+    "details": "Ultra-lightweight (67g) honeycomb shell with RGB lighting and flexible ascended cord"
+  },
+  {
+    "id": 6,
+    "name": "Zowie EC2",
+    "image": "/assets/viperv3pro.avif",
+    "price": 69.99,
+    "details": "Ergonomic design for right-handed users with 3360 sensor and adjustable DPI"
+  },
+  {
+    "id": 7,
+    "name": "Endgame Gear XM1r",
+    "image": "/assets/viperv3pro.avif",
+    "price": 79.99,
+    "details": "Low-profile symmetrical shape with Kailh GM 8.0 switches and ultra-flexible cable"
+  },
+  {
+    "id": 8,
+    "name": "Finalmouse Starlight-12 Phantom",
+    "image": "/assets/viperv3pro.avif",
+    "price": 189.99,
+    "details": "Ultra-lightweight (42g) magnesium alloy frame with limited edition design"
+  },
+  {
+    "id": 9,
+    "name": "Logitech G502 X PLUS",
+    "image": "/assets/viperv3pro.avif",
+    "price": 159.99,
+    "details": "LIGHTSPEED wireless with HERO 25K sensor and LIGHTSYNC RGB"
+  },
+  {
+    "id": 10,
+    "name": "Vaxee ZYGEN NP-01",
+    "image": "/assets/viperv3pro.avif",
+    "price": 74.99,
+    "details": "Ergonomic shape designed for competitive FPS games with 3389 sensor"
+  },
+  {
+    "id": 11,
+    "name": "Corsair Scimitar RGB Elite",
+    "image": "/assets/viperv3pro.avif",
+    "price": 79.99,
+    "details": "MMO/MOBA gaming mouse with 17 programmable buttons and adjustable side button panel"
+  },
+  {
+    "id": 12,
+    "name": "HyperX Pulsefire Haste",
+    "image": "/assets/viperv3pro.avif",
+    "price": 49.99,
+    "details": "Ultra-lightweight (59g) honeycomb shell with TTC Golden micro switches"
+  },
+  {
+    "id": 13,
+    "name": "Roccat Kone Pro",
+    "image": "/assets/viperv3pro.avif",
+    "price": 79.99,
+    "details": "Ergonomic performance mouse with Owl-Eye 19K DPI sensor and Titan optical switches"
+  },
+  {
+    "id": 14,
+    "name": "BenQ Zowie S2",
+    "image": "/assets/viperv3pro.avif",
+    "price": 69.99,
+    "details": "Medium-sized symmetrical mouse for esports with 3360 sensor"
+  },
+  {
+    "id": 15,
+    "name": "G-Wolves Hati S",
+    "image": "/assets/viperv3pro.avif",
+    "price": 89.99,
+    "details": "Ultra-lightweight (49g) symmetrical mouse with honeycomb design"
+  },
+  {
+    "id": 16,
+    "name": "Razer DeathAdder V3 Pro",
+    "image": "/assets/viperv3pro.avif",
+    "price": 149.99,
+    "details": "Ergonomic wireless gaming mouse with Focus Pro 30K optical sensor"
+  },
+  {
+    "id": 17,
+    "name": "Logitech G303 Shroud Edition",
+    "image": "/assets/viperv3pro.avif",
+    "price": 129.99,
+    "details": "Collaboration with Shroud featuring LIGHTSPEED wireless technology and HERO 25K sensor"
+  },
+  {
+    "id": 18,
+    "name": "Xtrfy M42",
+    "image": "/assets/viperv3pro.avif",
+    "price": 59.99,
+    "details": "Lightweight (59g) mouse with interchangeable back shells and RGB lighting"
+  },
+  {
+    "id": 19,
+    "name": "Mountain Makalu 67",
+    "image": "/assets/viperv3pro.avif",
+    "price": 59.99,
+    "details": "Ergonomic lightweight (67g) mouse with PixArt PMW3370 sensor"
+  },
+  {
+    "id": 20,
+    "name": "Razer Naga Pro",
+    "image": "/assets/viperv3pro.avif",
+    "price": 149.99,
+    "details": "Wireless modular gaming mouse with interchangeable side plates for different game genres"
+  },
+  {
+    "id": 21,
+    "name": "ASUS ROG Gladius III",
+    "image": "/assets/viperv3pro.avif",
+    "price": 99.99,
+    "details": "Push-fit switch socket design with 26,000 DPI sensor and tri-mode connectivity"
+  },
+  {
+    "id": 22,
+    "name": "SteelSeries Prime Wireless",
+    "image": "/assets/viperv3pro.avif",
+    "price": 129.99,
+    "details": "Competitive FPS mouse with magnetic optical switches rated for 100M clicks"
+  },
+  {
+    "id": 23,
+    "name": "HyperX Pulsefire FPS Pro",
+    "image": "/assets/viperv3pro.avif",
+    "price": 44.99,
+    "details": "RGB gaming mouse with Pixart 3389 sensor and customizable weights"
+  },
+  {
+    "id": 24,
+    "name": "Cooler Master MM720",
+    "image": "/assets/viperv3pro.avif",
+    "price": 49.99,
+    "details": "Lightweight (49g) mouse with honeycomb shell and ultra-weave cable"
+  },
+  {
+    "id": 25,
+    "name": "Glorious Model D Wireless",
+    "image": "/assets/viperv3pro.avif",
+    "price": 79.99,
+    "details": "Lightweight (69g) ergonomic wireless mouse with honeycomb design"
+  },
+  {
+    "id": 26,
+    "name": "Mad Catz R.A.T. Pro X3",
+    "image": "/assets/viperv3pro.avif",
+    "price": 199.99,
+    "details": "Fully customizable gaming mouse with adjustable parts and modular design"
+  },
+  {
+    "id": 27,
+    "name": "Fnatic BOLT",
+    "image": "/assets/viperv3pro.avif",
+    "price": 79.99,
+    "details": "Ultra-lightweight (67g) wireless mouse designed with esports professionals"
+  },
+  {
+    "id": 28,
+    "name": "Logitech MX Master 3",
+    "image": "/assets/viperv3pro.avif",
+    "price": 99.99,
+    "details": "Premium productivity mouse with electromagnet scroll wheel and app-specific customizations"
+  },
+  {
+    "id": 29,
+    "name": "Corsair Dark Core RGB Pro SE",
+    "image": "/assets/viperv3pro.avif",
+    "price": 89.99,
+    "details": "Wireless gaming mouse with Qi wireless charging and sub-1ms SLIPSTREAM technology"
+  },
+  {
+    "id": 30,
+    "name": "Razer Basilisk Ultimate",
+    "image": "/assets/viperv3pro.avif",
+    "price": 149.99,
+    "details": "Wireless gaming mouse with 11 programmable buttons and customizable scroll wheel resistance"
+  },
+  {
+    "id": 31,
+    "name": "Mouse 1744292934199",
+    "price": 45.09,
+    "details": "Generated dynamically",
+    "image": "/assets/viperv3pro.avif"
+  },
+  {
+    "id": 32,
+    "name": "Mouse 1744292975031",
+    "price": 14.05,
+    "details": "Generated dynamically",
+    "image": "/assets/viperv3pro.avif"
+  },
+  {
+    "id": 33,
+    "name": "Mouse 1744292985289",
+    "price": 19.2,
+    "details": "Generated dynamically",
+    "image": "/assets/viperv3pro.avif"
+  },
+  {
+    "id": 34,
+    "name": "Mouse 1744292995524",
+    "price": 4.64,
+    "details": "Generated dynamically",
+    "image": "/assets/viperv3pro.avif"
+  },
+  {
+    "id": 35,
+    "name": "Mouse 1744293005790",
+    "price": 41.74,
+    "details": "Generated dynamically",
+    "image": "/assets/viperv3pro.avif"
+  },
+  {
+    "id": 36,
+    "name": "Mouse 1744293016062",
+    "price": 33.22,
+    "details": "Generated dynamically",
+    "image": "/assets/viperv3pro.avif"
+  },
+  {
+    "id": 37,
+    "name": "Mouse 1744293026279",
+    "price": 4.14,
+    "details": "Generated dynamically",
+    "image": "/assets/viperv3pro.avif"
+  },
+  {
+    "id": 38,
+    "name": "Mouse 1744293036514",
+    "price": 69.12,
+    "details": "Generated dynamically",
+    "image": "/assets/viperv3pro.avif"
+  },
+  {
+    "id": 39,
+    "name": "Mouse 1744293046742",
+    "price": 23.09,
+    "details": "Generated dynamically",
+    "image": "/assets/viperv3pro.avif"
+  },
+  {
+    "id": 40,
+    "name": "Mouse 1744293056909",
+    "price": 49.61,
+    "details": "Generated dynamically",
+    "image": "/assets/viperv3pro.avif"
+  },
+  {
+    "id": 41,
+    "name": "Mouse 1744293067131",
+    "price": 26.5,
+    "details": "Generated dynamically",
+    "image": "/assets/viperv3pro.avif"
+  },
+  {
+    "id": 42,
+    "name": "Mouse 1744293077397",
+    "price": 47.85,
+    "details": "Generated dynamically",
+    "image": "/assets/viperv3pro.avif"
+  },
+  {
+    "id": 43,
+    "name": "Mouse 1744293087681",
+    "price": 84.93,
+    "details": "Generated dynamically",
+    "image": "/assets/viperv3pro.avif"
+  }
+]
