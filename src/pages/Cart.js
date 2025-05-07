@@ -1,3 +1,4 @@
+// Language: JavaScript
 import React, { useContext } from 'react';
 import { CartContext } from '../context/CartContext';
 import '../styles/Cart.css';
@@ -21,18 +22,12 @@ function Cart() {
         }, 0).toFixed(2);
     };
 
-    // Create proper image URL for server-hosted images
+    // Create proper image URL for server-hosted images using dynamic hostname
     const getImagePath = (imagePath) => {
         if (!imagePath) return 'https://via.placeholder.com/150?text=No+Image';
-
-        // If the path already starts with http or https, use it directly
         if (imagePath.startsWith('http')) return imagePath;
-
-        // Remove leading slash if present
         const path = imagePath.startsWith('/') ? imagePath.substring(1) : imagePath;
-
-        // Return the URL pointing to your server
-        return `http://localhost:5002/${path}`;
+        return `http://${window.location.hostname}:5002/${path}`;
     };
 
     return (

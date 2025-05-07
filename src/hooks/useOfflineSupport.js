@@ -8,6 +8,7 @@ function useOfflineSupport() {
         JSON.parse(localStorage.getItem('pendingOperations') || '[]')
     );
     const [isProcessing, setIsProcessing] = useState(false);
+    const API_BASE = `http://${window.location.hostname}:5002`;
 
     // Detect network status
     useEffect(() => {
@@ -32,7 +33,7 @@ function useOfflineSupport() {
             }
 
             try {
-                const response = await fetch('http://localhost:5002/api/mice', { method: 'HEAD' });
+                const response = await fetch(`${API_BASE}/api/mice`, { method: 'HEAD' });
                 setIsServerUp(response.ok);
             } catch {
                 setIsServerUp(false);
@@ -42,7 +43,7 @@ function useOfflineSupport() {
         checkServer();
         const interval = setInterval(checkServer, 5000);
         return () => clearInterval(interval);
-    }, [isOnline]);
+    }, [isOnline, API_BASE]);
 
     // Process pending operations when online and server is up
     useEffect(() => {
@@ -63,15 +64,15 @@ function useOfflineSupport() {
             try {
                 switch (op.type) {
                     case 'ADD_MOUSE':
-                        await axios.post('http://localhost:5002/api/mice', op.data);
+                        await axios.post(`${API_BASE}/api/mice`, op.data);
                         break;
 
                     case 'UPDATE_MOUSE':
-                        await axios.patch(`http://localhost:5002/api/mice/${op.data.id}`, op.data);
+                        await axios.patch(`${API_BASE}/api/mice/${op.data.id}`, op.data);
                         break;
 
                     case 'DELETE_MOUSE':
-                        await axios.delete(`http://localhost:5002/api/mice/${op.data.id}`);
+                        await axios.delete(`${API_BASE}/api/mice/${op.data.id}`);
                         break;
 
                     default:
@@ -82,7 +83,7 @@ function useOfflineSupport() {
                 setPendingOperations(prev => prev.slice(1));
 
                 // Refresh cache after successful operation
-                const response = await fetch('http://localhost:5002/api/mice');
+                const response = await fetch(`${API_BASE}/api/mice`);
                 if (response.ok) {
                     const data = await response.json();
                     localStorage.setItem('cachedMice', JSON.stringify(data));
@@ -105,7 +106,7 @@ function useOfflineSupport() {
         } finally {
             setIsProcessing(false);
         }
-    }, [isOnline, isServerUp, pendingOperations, isProcessing]);
+    }, [isOnline, isServerUp, pendingOperations, isProcessing, API_BASE]);
 
     // Save pending operations to localStorage
     useEffect(() => {

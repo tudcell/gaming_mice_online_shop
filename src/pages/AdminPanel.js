@@ -1,4 +1,3 @@
-// File: src/pages/AdminPanel.js
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import RealTimeCharts from '../components/RealTimeCharts';
@@ -7,6 +6,9 @@ import RealTimePieChart from '../components/RealTimePieChart';
 import '../styles/AdminPanel.css';
 
 function AdminPanel() {
+    const BASE_URL = `http://${window.location.hostname}:5002`;
+    const WS_URL = `ws://${window.location.hostname}:5002`;
+
     const [mice, setMice] = useState([]);
     const [formData, setFormData] = useState({ name: '', price: '', details: '', image: '/assets/viperv3pro.avif' });
     const [editingId, setEditingId] = useState(null);
@@ -15,27 +17,58 @@ function AdminPanel() {
     const [selectedFile, setSelectedFile] = useState(null);
     const [uploading, setUploading] = useState(false);
     const [isOffline, setIsOffline] = useState(!navigator.onLine);
+    const [genRunning, setGenRunning] = useState(false);
+
+    // Pagination state
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(50);
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalCount, setTotalCount] = useState(0);
+
+    // Fetch generation status from the server
+    const refreshGenerationState = async () => {
+        try {
+            const response = await axios.get(`${BASE_URL}/api/generation/status`);
+            setGenRunning(response.data.running);
+        } catch (error) {
+            console.error('Error fetching generation status:', error);
+        }
+    };
 
     useEffect(() => {
-        fetchMice();
+        fetchPaginatedMice();
         const storedQueue = JSON.parse(localStorage.getItem('offlineQueue') || '[]');
         setOfflineQueue(storedQueue);
 
-        const socket = new WebSocket('ws://localhost:5002');
+        const socket = new WebSocket(WS_URL);
         socket.onmessage = (event) => {
             const message = JSON.parse(event.data);
             switch (message.type) {
                 case 'NEW_MOUSE':
-                    setMice(prev => [...prev, message.data]);
+                    // Only add to current view if we're on the first page
+                    if (page === 1) {
+                        setMice(prev => [message.data, ...prev.slice(0, pageSize - 1)]);
+                    }
+                    setTotalCount(prev => prev + 1);
+                    setTotalPages(Math.ceil((totalCount + 1) / pageSize));
                     break;
                 case 'UPDATED_MOUSE':
                     setMice(prev => prev.map(mouse => mouse.id === message.data.id ? message.data : mouse));
                     break;
                 case 'DELETED_MOUSE':
                     setMice(prev => prev.filter(mouse => mouse.id !== message.data.id));
+                    setTotalCount(prev => prev - 1);
+                    setTotalPages(Math.ceil((totalCount - 1) / pageSize));
                     break;
                 case 'INITIAL_DATA':
-                    setMice(message.data);
+                    if (message.data && Array.isArray(message.data)) {
+                        setMice(message.data);
+                    }
+                    if (message.meta) {
+                        setTotalCount(message.meta.totalCount || 0);
+                        setTotalPages(Math.ceil(message.meta.totalCount / pageSize));
+                    }
+                    setGenRunning(message.genRunning || false);
                     break;
                 default:
                     console.warn('Unknown message type:', message.type);
@@ -48,6 +81,7 @@ function AdminPanel() {
         const handleOnline = () => {
             setIsOffline(false);
             syncOfflineChanges();
+            refreshGenerationState();
         };
         const handleOffline = () => setIsOffline(true);
         window.addEventListener('online', handleOnline);
@@ -58,13 +92,22 @@ function AdminPanel() {
         };
     }, [offlineQueue]);
 
-    const fetchMice = async () => {
+    // Update when pagination changes
+    useEffect(() => {
+        fetchPaginatedMice();
+    }, [page, pageSize]);
+
+    const fetchPaginatedMice = async () => {
         try {
             setLoading(true);
-            const response = await axios.get('http://localhost:5002/api/mice');
-            setMice(response.data);
+            const response = await axios.get(`${BASE_URL}/api/mice/paginated`, {
+                params: { page, pageSize }
+            });
+            setMice(response.data.mice);
+            setTotalCount(response.data.totalCount);
+            setTotalPages(response.data.totalPages);
         } catch (error) {
-            console.error('Error fetching mice:', error);
+            console.error('Error fetching paginated mice:', error);
         } finally {
             setLoading(false);
         }
@@ -78,14 +121,13 @@ function AdminPanel() {
         setSelectedFile(e.target.files[0]);
     };
 
-    // Modified: Upload file without changing the image field.
     const handleFileUpload = async () => {
         if (!selectedFile) return;
         const fileData = new FormData();
         fileData.append('file', selectedFile);
         try {
             setUploading(true);
-            const response = await axios.post('http://localhost:5002/api/upload', fileData, {
+            const response = await axios.post(`${BASE_URL}/api/upload`, fileData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
             console.log('File uploaded successfully. File path:', response.data.filePath);
@@ -105,18 +147,21 @@ function AdminPanel() {
             setLoading(true);
             if (navigator.onLine) {
                 if (editingId) {
-                    await axios.patch(`http://localhost:5002/api/mice/${editingId}`, mouseData);
+                    await axios.patch(`${BASE_URL}/api/mice/${editingId}`, mouseData);
                     setMice(prev => prev.map(mouse => mouse.id === editingId ? { ...mouse, ...mouseData } : mouse));
                 } else {
-                    const response = await axios.post('http://localhost:5002/api/mice', mouseData);
-                    setMice(prev => [...prev, response.data]);
+                    const response = await axios.post(`${BASE_URL}/api/mice`, mouseData);
+                    // Only add to current view if we're on the first page
+                    if (page === 1) {
+                        setMice(prev => [response.data, ...prev.slice(0, pageSize - 1)]);
+                    }
+                    setTotalCount(prev => prev + 1);
+                    setTotalPages(Math.ceil((totalCount + 1) / pageSize));
                 }
             } else {
                 if (editingId) {
                     const updatedQueue = offlineQueue.map(item =>
-                        item.type === 'UPDATE' && item.data.id === editingId
-                            ? { ...item, data: { ...item.data, ...mouseData } }
-                            : item
+                        item.type === 'UPDATE' && item.data.id === editingId ? { ...item, data: { ...mouseData, id: editingId } } : item
                     );
                     if (!updatedQueue.some(item => item.type === 'UPDATE' && item.data.id === editingId)) {
                         updatedQueue.push({ type: 'UPDATE', data: { ...mouseData, id: editingId } });
@@ -129,7 +174,12 @@ function AdminPanel() {
                     const updatedQueue = [...offlineQueue, { type: 'ADD', data: newMouse }];
                     setOfflineQueue(updatedQueue);
                     localStorage.setItem('offlineQueue', JSON.stringify(updatedQueue));
-                    setMice(prev => [...prev, newMouse]);
+                    // Only add to current view if we're on the first page
+                    if (page === 1) {
+                        setMice(prev => [newMouse, ...prev.slice(0, pageSize - 1)]);
+                    }
+                    setTotalCount(prev => prev + 1);
+                    setTotalPages(Math.ceil((totalCount + 1) / pageSize));
                 }
             }
             setEditingId(null);
@@ -146,7 +196,11 @@ function AdminPanel() {
             setLoading(true);
             if (navigator.onLine) {
                 try {
-                    await axios.delete(`http://localhost:5002/api/mice/${id}`);
+                    await axios.delete(`${BASE_URL}/api/mice/${id}`);
+                    // Remove from current view
+                    setMice(prev => prev.filter(mouse => mouse.id !== id));
+                    setTotalCount(prev => prev - 1);
+                    setTotalPages(Math.ceil((totalCount - 1) / pageSize));
                 } catch (error) {
                     console.error('Error deleting mouse:', error);
                 }
@@ -155,6 +209,8 @@ function AdminPanel() {
                 setOfflineQueue(updatedQueue);
                 localStorage.setItem('offlineQueue', JSON.stringify(updatedQueue));
                 setMice(prev => prev.filter(mouse => mouse.id !== id));
+                setTotalCount(prev => prev - 1);
+                setTotalPages(Math.ceil((totalCount - 1) / pageSize));
             }
             setLoading(false);
         }
@@ -166,7 +222,8 @@ function AdminPanel() {
             for (const mouse of fakeMice) {
                 if (navigator.onLine) {
                     try {
-                        await axios.delete(`http://localhost:5002/api/mice/${mouse.id}`);
+                        await axios.delete(`${BASE_URL}/api/mice/${mouse.id}`);
+                        setTotalCount(prev => prev - 1);
                     } catch (error) {
                         console.error(`Error deleting fake mouse ${mouse.id}:`, error);
                     }
@@ -177,6 +234,7 @@ function AdminPanel() {
                 }
             }
             setMice(prev => prev.filter(mouse => mouse.details !== 'Generated dynamically'));
+            setTotalPages(Math.ceil(totalCount / pageSize));
         }
     };
 
@@ -188,16 +246,18 @@ function AdminPanel() {
         for (const change of queue) {
             try {
                 if (change.type === 'ADD') {
-                    await axios.post('http://localhost:5002/api/mice', change.data);
+                    await axios.post(`${BASE_URL}/api/mice`, change.data);
                 } else if (change.type === 'UPDATE') {
-                    await axios.patch(`http://localhost:5002/api/mice/${change.data.id}`, change.data);
+                    await axios.patch(`${BASE_URL}/api/mice/${change.data.id}`, change.data);
                 } else if (change.type === 'DELETE') {
-                    await axios.delete(`http://localhost:5002/api/mice/${change.data.id}`);
+                    await axios.delete(`${BASE_URL}/api/mice/${change.data.id}`);
                 }
             } catch (error) {
                 console.error('Error syncing offline changes:', error);
             }
         }
+        // Refresh the current page after syncing
+        fetchPaginatedMice();
     };
 
     const handleEdit = (mouse) => {
@@ -215,9 +275,44 @@ function AdminPanel() {
         setFormData({ name: '', price: '', details: '', image: '/assets/viperv3pro.avif' });
     };
 
+    const toggleGeneration = async () => {
+        try {
+            if (genRunning) {
+                await axios.post(`${BASE_URL}/api/generation/stop`);
+                setGenRunning(false);
+            } else {
+                await axios.post(`${BASE_URL}/api/generation/start`);
+                setGenRunning(true);
+            }
+        } catch (error) {
+            console.error('Error toggling generation:', error);
+        }
+    };
+
+    // Pagination handlers
+    const handleNextPage = () => {
+        if (page < totalPages) {
+            setPage(page + 1);
+        }
+    };
+
+    const handlePrevPage = () => {
+        if (page > 1) {
+            setPage(page - 1);
+        }
+    };
+
+    const handlePageSizeChange = (e) => {
+        setPageSize(Number(e.target.value));
+        setPage(1); // Reset to first page when changing page size
+    };
+
     return (
         <div className="admin-panel">
             <h1>Admin Panel</h1>
+            <button onClick={toggleGeneration} disabled={loading}>
+                {genRunning ? 'Stop Generation' : 'Start Generation'}
+            </button>
             {isOffline && (
                 <div className="network-warning">
                     Network/Server is down.
@@ -264,7 +359,21 @@ function AdminPanel() {
                     Delete All Fake Mice
                 </button>
             </div>
-            <h2>Mouse Inventory</h2>
+            <h2>Mouse Inventory ({totalCount} total items)</h2>
+
+            {/* Pagination controls */}
+            <div className="pagination-controls">
+                <button onClick={handlePrevPage} disabled={page === 1 || loading}>Previous</button>
+                <span>Page {page} of {totalPages}</span>
+                <button onClick={handleNextPage} disabled={page === totalPages || loading}>Next</button>
+                <select value={pageSize} onChange={handlePageSizeChange} disabled={loading}>
+                    <option value={10}>10 per page</option>
+                    <option value={25}>25 per page</option>
+                    <option value={50}>50 per page</option>
+                    <option value={100}>100 per page</option>
+                </select>
+            </div>
+
             {loading ? (
                 <div className="loading">Loading...</div>
             ) : (
@@ -283,14 +392,24 @@ function AdminPanel() {
                             <tr key={mouse.id}>
                                 <td>{mouse.id}</td>
                                 <td>{mouse.name}</td>
-                                <td>${(parseFloat(mouse.price) || 0).toFixed(2)}</td>
+                                <td>{mouse.price}</td>
                                 <td>
-                                    <button onClick={() => handleEdit(mouse)} disabled={loading}>
-                                        Edit
-                                    </button>
-                                    <button onClick={() => handleDelete(mouse.id)} disabled={loading}>
-                                        Delete
-                                    </button>
+                                    <div className="action-buttons">
+                                        <button
+                                            className="edit-btn"
+                                            onClick={() => handleEdit(mouse)}
+                                            disabled={loading}
+                                        >
+                                            Edit
+                                        </button>
+                                        <button
+                                            className="delete-btn"
+                                            onClick={() => handleDelete(mouse.id)}
+                                            disabled={loading}
+                                        >
+                                            Delete
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         ))
@@ -304,7 +423,15 @@ function AdminPanel() {
                     </tbody>
                 </table>
             )}
-            <h2>Mouse Data Charts</h2>
+
+            {/* Duplicate pagination controls at the bottom for better UX */}
+            <div className="pagination-controls">
+                <button onClick={handlePrevPage} disabled={page === 1 || loading}>Previous</button>
+                <span>Page {page} of {totalPages}</span>
+                <button onClick={handleNextPage} disabled={page === totalPages || loading}>Next</button>
+            </div>
+
+            <h2>Mouse Data Charts (Current Page)</h2>
             <RealTimeCharts items={mice} />
             <RealTimeBarChart items={mice} />
             <RealTimePieChart items={mice} />
