@@ -495,10 +495,10 @@ app.delete('/api/categories/:id', async (req, res) => {
 });
 
 // Serve React production build static files
-app.use(express.static(path.join(__dirname, '../build')));
-app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../build', 'index.html'));
-});
+// app.use(express.static(path.join(__dirname, '../build')));
+// app.get('*', (req, res) => {
+//     res.sendFile(path.join(__dirname, '../build', 'index.html'));
+// });
 
 // Start server and WebSocket only if this file is executed directly
 if (require.main === module) {
