@@ -24,7 +24,10 @@ function Menu({ testMode = false }) {
 
     const isMounted = useRef(true);
     const wsRef = useRef(null);
-    const BASE_URL = `http://${window.location.hostname}:5002`;
+
+    // Use .env backend URL
+    const BASE_URL = process.env.REACT_APP_API_URL?.replace(/\/$/, '') || '';
+    const WS_URL = BASE_URL ? BASE_URL.replace(/^http/, 'ws') : '';
 
     useEffect(() => {
         isMounted.current = true;
@@ -105,7 +108,6 @@ function Menu({ testMode = false }) {
 
             if (!isMounted.current) return;
 
-            // Check if we have the expected data structure
             if (!data || !Array.isArray(data.mice)) {
                 throw new Error('Invalid data structure received from server');
             }
@@ -151,22 +153,20 @@ function Menu({ testMode = false }) {
     }, [page, pageSize, debouncedMinPrice, debouncedMaxPrice, sortOrder, fetchPaginatedMice]);
 
     useEffect(() => {
-        // Clean up existing WebSocket
         if (wsRef.current) {
             wsRef.current.close();
             wsRef.current = null;
         }
 
-        if (isOfflineMode || testMode) return;
+        if (isOfflineMode || testMode || !WS_URL) return;
 
         try {
-            wsRef.current = new WebSocket(`ws://${window.location.hostname}:5002`);
+            wsRef.current = new WebSocket(`${WS_URL}/ws`);
 
             wsRef.current.onmessage = (event) => {
                 try {
                     const message = JSON.parse(event.data);
                     if (message.type === 'NEW_MOUSE' || message.type === 'UPDATED_MOUSE' || message.type === 'DELETED_MOUSE') {
-                        // Refresh current page when data changes, but throttle to avoid too many refreshes
                         fetchPaginatedMice();
                     }
                 } catch (error) {
@@ -177,14 +177,13 @@ function Menu({ testMode = false }) {
             console.error('Error setting up WebSocket:', error);
         }
 
-        // Cleanup function
         return () => {
             if (wsRef.current) {
                 wsRef.current.close();
                 wsRef.current = null;
             }
         };
-    }, [fetchPaginatedMice, isOfflineMode, testMode]);
+    }, [fetchPaginatedMice, isOfflineMode, testMode, WS_URL]);
 
     const resetFilters = () => {
         setPage(1);
@@ -213,7 +212,7 @@ function Menu({ testMode = false }) {
 
     const handlePageSizeChange = (e) => {
         setPageSize(Number(e.target.value));
-        setPage(1); // Reset to first page when changing page size
+        setPage(1);
     };
 
     if (loading && mice.length === 0) {
@@ -268,7 +267,6 @@ function Menu({ testMode = false }) {
                 </label>
             </div>
 
-            {/* Pagination controls */}
             <div className="pagination-controls">
                 <button onClick={() => handlePageChange(1)} disabled={page === 1 || loading}>First</button>
                 <button onClick={() => handlePageChange(page - 1)} disabled={page === 1 || loading}>Previous</button>
@@ -304,7 +302,6 @@ function Menu({ testMode = false }) {
 
             {loading && mice.length > 0 && <p className="loading-more">Loading...</p>}
 
-            {/* Duplicate pagination controls at the bottom for better UX */}
             <div className="pagination-controls">
                 <button onClick={() => handlePageChange(1)} disabled={page === 1 || loading}>First</button>
                 <button onClick={() => handlePageChange(page - 1)} disabled={page === 1 || loading}>Previous</button>

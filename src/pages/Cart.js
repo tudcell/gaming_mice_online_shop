@@ -1,4 +1,3 @@
-// Language: JavaScript
 import React, { useContext } from 'react';
 import { CartContext } from '../context/CartContext';
 import '../styles/Cart.css';
@@ -22,12 +21,13 @@ function Cart() {
         }, 0).toFixed(2);
     };
 
-    // Create proper image URL for server-hosted images using dynamic hostname
+    // Use .env backend URL for server-hosted images
     const getImagePath = (imagePath) => {
         if (!imagePath) return 'https://via.placeholder.com/150?text=No+Image';
         if (imagePath.startsWith('http')) return imagePath;
         const path = imagePath.startsWith('/') ? imagePath.substring(1) : imagePath;
-        return `http://${window.location.hostname}:5002/${path}`;
+        const API_BASE = process.env.REACT_APP_API_URL?.replace(/\/$/, '') || '';
+        return `${API_BASE}/${path}`;
     };
 
     return (

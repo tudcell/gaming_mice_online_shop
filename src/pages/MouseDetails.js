@@ -1,4 +1,3 @@
-// File: src/pages/MouseDetails.js
 import React, { useContext, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { CartContext } from '../context/CartContext';
@@ -13,7 +12,9 @@ function MouseDetails() {
     const [message, setMessage] = useState('');
     const [imageError, setImageError] = useState(false);
 
-    // Safety check if no mouse data
+    // Use .env backend URL for server-hosted images
+    const API_BASE = process.env.REACT_APP_API_URL?.replace(/\/$/, '') || '';
+
     if (!mouse || Object.keys(mouse).length === 0) {
         return (
             <div className="mouseDetails">
@@ -25,22 +26,12 @@ function MouseDetails() {
         );
     }
 
-    // Get image path safely with absolute URL from the server
     const getImagePath = () => {
         try {
             if (!mouse.image) return '';
-            // If the image path already starts with "http", return it as is
-            if (mouse.image.startsWith('http')) {
-                return mouse.image;
-            }
-            // Otherwise, prefix the image path with the server URL
-            if (mouse.image.startsWith('/assets/')) {
-                return `http://localhost:5002${mouse.image}`;
-            }
-            // If the image path is not in the proper format, extract the filename and create the path
-            const parts = mouse.image.split('/');
-            const filename = parts[parts.length - 1];
-            return `http://localhost:5002/assets/${filename}`;
+            if (mouse.image.startsWith('http')) return mouse.image;
+            const path = mouse.image.startsWith('/') ? mouse.image.substring(1) : mouse.image;
+            return `${API_BASE}/${path}`;
         } catch (error) {
             console.error("Error processing image path:", error);
             return '';
@@ -56,7 +47,6 @@ function MouseDetails() {
                 image: imageError ? '' : getImagePath(),
                 details: mouse.details || ''
             };
-            console.log("Adding to cart from MouseDetails:", mouseWithId);
             addToCart(mouseWithId);
             setMessage('Item added to cart!');
             setTimeout(() => setMessage(''), 3000);
@@ -75,10 +65,7 @@ function MouseDetails() {
                     <img
                         src={getImagePath()}
                         alt={mouse.name || 'Mouse image'}
-                        onError={() => {
-                            console.error("Image failed to load");
-                            setImageError(true);
-                        }}
+                        onError={() => setImageError(true)}
                     />
                 ) : (
                     <div className="image-placeholder">Image not available</div>

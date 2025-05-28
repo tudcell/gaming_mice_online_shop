@@ -6,8 +6,10 @@ import RealTimePieChart from '../components/RealTimePieChart';
 import '../styles/AdminPanel.css';
 
 function AdminPanel() {
-    const BASE_URL = `http://${window.location.hostname}:5002`;
-    const WS_URL = `ws://${window.location.hostname}:5002`;
+    const BASE_URL = process.env.REACT_APP_API_URL?.replace(/\/$/, '') || '';
+    const WS_URL = BASE_URL
+        ? BASE_URL.replace(/^http/, 'ws')
+        : '';
 
     const [mice, setMice] = useState([]);
     const [formData, setFormData] = useState({ name: '', price: '', details: '', image: '/assets/viperv3pro.avif' });

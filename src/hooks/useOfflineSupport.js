@@ -8,7 +8,7 @@ function useOfflineSupport() {
         JSON.parse(localStorage.getItem('pendingOperations') || '[]')
     );
     const [isProcessing, setIsProcessing] = useState(false);
-    const API_BASE = `http://${window.location.hostname}:5002`;
+    const API_BASE = process.env.REACT_APP_API_URL;
 
     // Detect network status
     useEffect(() => {
