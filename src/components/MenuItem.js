@@ -1,23 +1,21 @@
-// Language: JavaScript
-import React from "react";
+import React, { useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { CartContext } from "../context/CartContext";
-import { useContext } from "react";
 
 function MenuItem({ image, name, price, details, id }) {
     const navigate = useNavigate();
     const { addToCart } = useContext(CartContext);
 
-    // Create proper image URL for server-hosted images using dynamic hostname
+    // Use .env backend URL for server-hosted images
+    const API_BASE = process.env.REACT_APP_API_URL?.replace(/\/$/, "") || "";
+
     const getImagePath = (imagePath) => {
         if (!imagePath) {
             return "https://via.placeholder.com/150?text=No+Image";
         }
         if (imagePath.startsWith("http")) return imagePath;
         const path = imagePath.startsWith("/") ? imagePath.substring(1) : imagePath;
-        const fullUrl = `http://${window.location.hostname}:5002/${path}`;
-        console.log("Constructed image URL:", fullUrl);
-        return fullUrl;
+        return `${API_BASE}/${path}`;
     };
 
     const handleAddToCart = (e) => {
