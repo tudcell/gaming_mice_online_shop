@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import MenuItem from '../components/MenuItem';
-import StatusIndicator from '../components/StatusIndicator';
-import useOfflineSupport from '../hooks/useOfflineSupport';
 import '../styles/Menu.css';
 
 function Menu({ testMode = false }) {
@@ -13,8 +11,6 @@ function Menu({ testMode = false }) {
     const [sortOrder, setSortOrder] = useState('');
     const [debouncedMinPrice, setDebouncedMinPrice] = useState('');
     const [debouncedMaxPrice, setDebouncedMaxPrice] = useState('');
-    const { isOnline, isServerUp } = useOfflineSupport();
-    const isOfflineMode = !isOnline || !isServerUp;
 
     // Server-side pagination state
     const [page, setPage] = useState(1);
@@ -55,42 +51,6 @@ function Menu({ testMode = false }) {
         }
 
         try {
-            if (isOfflineMode) {
-                let storedMice = [];
-                try {
-                    storedMice = JSON.parse(localStorage.getItem('cachedMice') || '[]');
-                    storedMice = storedMice.filter(m => m && m.id);
-                } catch (err) {
-                    console.error('Error parsing cached mice:', err);
-                }
-
-                // Apply filters client-side in offline mode
-                let filtered = [...storedMice];
-                if (debouncedMinPrice) {
-                    filtered = filtered.filter(m => m && m.price >= parseFloat(debouncedMinPrice));
-                }
-                if (debouncedMaxPrice) {
-                    filtered = filtered.filter(m => m && m.price <= parseFloat(debouncedMaxPrice));
-                }
-                if (sortOrder === 'lowToHigh') {
-                    filtered.sort((a, b) => (a?.price || 0) - (b?.price || 0));
-                } else if (sortOrder === 'highToLow') {
-                    filtered.sort((a, b) => (b?.price || 0) - (a?.price || 0));
-                }
-
-                // Manual pagination for offline mode
-                const startIndex = (page - 1) * pageSize;
-                const endIndex = startIndex + pageSize;
-                const paginatedResults = filtered.slice(startIndex, endIndex);
-
-                if (isMounted.current) {
-                    setMice(paginatedResults);
-                    setTotalCount(filtered.length);
-                    setTotalPages(Math.max(1, Math.ceil(filtered.length / pageSize)));
-                }
-                return;
-            }
-
             // Online mode - fetch from API
             const params = new URLSearchParams();
             params.append('page', page);
@@ -115,38 +75,15 @@ function Menu({ testMode = false }) {
             setMice(data.mice.filter(m => m && m.id));
             setTotalCount(data.totalCount || 0);
             setTotalPages(Math.max(1, Math.ceil((data.totalCount || 0) / pageSize)));
-
-            // Cache first page results for offline use
-            if (page === 1) {
-                try {
-                    localStorage.setItem('cachedMice', JSON.stringify(data.mice || []));
-                } catch (err) {
-                    console.error('Error caching mice:', err);
-                }
-            }
         } catch (error) {
             console.error('Error fetching mice:', error);
             if (isMounted.current) {
                 setError(`Failed to load data. ${error.message}`);
             }
-
-            // Try to load from cache in case of error
-            if (page === 1) {
-                try {
-                    const storedMice = JSON.parse(localStorage.getItem('cachedMice') || '[]');
-                    if (storedMice.length > 0 && isMounted.current) {
-                        setMice(storedMice);
-                        setTotalCount(storedMice.length);
-                        setTotalPages(Math.max(1, Math.ceil(storedMice.length / pageSize)));
-                    }
-                } catch (err) {
-                    console.error('Error parsing cached mice:', err);
-                }
-            }
         } finally {
             if (isMounted.current) setLoading(false);
         }
-    }, [testMode, page, pageSize, debouncedMinPrice, debouncedMaxPrice, sortOrder, isOfflineMode, BASE_URL]);
+    }, [testMode, page, pageSize, debouncedMinPrice, debouncedMaxPrice, sortOrder, BASE_URL]);
 
     useEffect(() => {
         fetchPaginatedMice();
@@ -158,7 +95,7 @@ function Menu({ testMode = false }) {
             wsRef.current = null;
         }
 
-        if (isOfflineMode || testMode || !WS_URL) return;
+        if (testMode || !WS_URL) return;
 
         try {
             wsRef.current = new WebSocket(`${WS_URL}/ws`);
@@ -183,7 +120,7 @@ function Menu({ testMode = false }) {
                 wsRef.current = null;
             }
         };
-    }, [fetchPaginatedMice, isOfflineMode, testMode, WS_URL]);
+    }, [fetchPaginatedMice, testMode, WS_URL]);
 
     const resetFilters = () => {
         setPage(1);
@@ -221,14 +158,6 @@ function Menu({ testMode = false }) {
 
     return (
         <div className="menu">
-            <StatusIndicator isOnline={isOnline} isServerUp={isServerUp} />
-
-            {isOfflineMode && (
-                <div className="offline-alert">
-                    <p>Currently working in offline mode. Changes will sync when connection is restored.</p>
-                </div>
-            )}
-
             {error && (
                 <div className="error-alert">
                     <p>{error}</p>
