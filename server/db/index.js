@@ -5,18 +5,33 @@ const dotenv = require('dotenv');
 dotenv.config();
 
 // Configure Sequelize with PostgreSQL
-const sequelize = new Sequelize(
-    process.env.PG_DATABASE || 'MICE_DB',
-    process.env.PG_USER || 'tudorsabau',
-    process.env.PG_PASSWORD || '',
-    {
-        host: process.env.PG_HOST || 'localhost',
-        port: process.env.PG_PORT || 5432,
-        dialect: 'postgres',
-        logging: false
-    }
-);
 
+// Modified version for server/db/index.js
+const sequelize = new Sequelize({
+    database: process.env.PG_DATABASE || 'MICE_DB',
+    username: process.env.PG_USER || 'tudorsabau',
+    password: process.env.PG_PASSWORD || '',
+    host: process.env.PG_HOST || 'localhost',
+    port: process.env.PG_PORT || 5432,
+    dialect: 'postgres',
+    logging: false,
+    define: {
+        freezeTableName: false,
+        timestamps: true
+    },
+    // Remove operatorsAliases as it's deprecated
+    skipIndexes: true,
+    dialectOptions: {
+        // Disable SSL for local development
+        ssl: false
+    },
+    pool: {
+        max: 5,
+        min: 0,
+        acquire: 30000,
+        idle: 10000
+    }
+});
 // Define Mouse model
 const Mouse = sequelize.define('Mouse', {
     name: {
@@ -102,9 +117,15 @@ const getMiceOrder = (queryParams) => {
 };
 
 // Sync models with database
+// More robust initialization function
 const initDb = async (initialData) => {
     try {
-        await sequelize.sync({ alter: true });
+        // First test connectivity
+        await sequelize.authenticate();
+        console.log('Database connection established successfully');
+
+        // Use alter: true instead of sync to avoid the problematic index queries
+         await sequelize.sync({ alter: true });
         console.log('Database synchronized');
 
         // Seed initial data if provided
@@ -114,7 +135,6 @@ const initDb = async (initialData) => {
                 console.log('Seeding initial data...');
                 await Mouse.bulkCreate(initialData);
 
-                // Create some default categories
                 const categories = [
                     { name: 'Gaming', description: 'Mice optimized for gaming performance' },
                     { name: 'Office', description: 'Mice for everyday office use' },
@@ -127,8 +147,11 @@ const initDb = async (initialData) => {
         }
     } catch (error) {
         console.error('Database synchronization failed:', error);
+        console.error('Error details:', error.stack);
+        // Continue execution even if sync fails
     }
 };
+
 
 module.exports = {
     sequelize,

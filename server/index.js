@@ -502,8 +502,9 @@ app.get('*', (req, res) => {
 
 // Start server and WebSocket only if this file is executed directly
 if (require.main === module) {
-    const server = app.listen(5002, '0.0.0.0', () => {
-        console.log('Server running on port 5002 and accessible externally');
+    const PORT = process.env.PORT || 5002;
+    const server = app.listen(PORT, '0.0.0.0', () => {
+        console.log(`Server running on port ${PORT} and accessible externally`);
     });
 
     // Upgrade HTTP server to WebSocket server
@@ -552,5 +553,135 @@ if (require.main === module) {
         }
     });
 }
+
+
+// Complex statistics endpoint with optimized performance
+app.get('/api/statistics', async (req, res) => {
+    try {
+        console.time('stats-query');
+
+        // Use a transaction to ensure consistent reads
+        const result = await sequelize.transaction(async (t) => {
+            // Run complex queries in parallel for better performance
+            const [
+                priceDistribution,
+                topCategories,
+                growthTrends,
+                categoryInsights
+            ] = await Promise.all([
+                // Price distribution statistics
+                sequelize.query(`
+                    SELECT
+                        CASE
+                            WHEN price < 50 THEN 'Budget (<$50)'
+                            WHEN price BETWEEN 50 AND 100 THEN 'Mid-range ($50-$100)'
+                            WHEN price BETWEEN 100 AND 200 THEN 'Premium ($100-$200)'
+                            ELSE 'High-end (>$200)'
+                        END AS price_range,
+                        COUNT(*) as count,
+                        ROUND(AVG(price), 2) as avg_price,
+                        MIN(price) as min_price,
+                        MAX(price) as max_price
+                    FROM "Mice"
+                    GROUP BY price_range
+                    ORDER BY min_price
+                `, {
+                    transaction: t,
+                    type: sequelize.QueryTypes.SELECT
+                }),
+
+                // Top 10 most populated categories
+                sequelize.query(`
+                    SELECT 
+                        c.id,
+                        c.name,
+                        COUNT(mc."MouseId") as product_count,
+                        ROUND(AVG(m.price), 2) as avg_price
+                    FROM "Categories" c
+                    JOIN "MouseCategories" mc ON c.id = mc."CategoryId"
+                    JOIN "Mice" m ON mc."MouseId" = m.id
+                    GROUP BY c.id, c.name
+                    ORDER BY product_count DESC
+                    LIMIT 10
+                `, {
+                    transaction: t,
+                    type: sequelize.QueryTypes.SELECT
+                }),
+
+                // Growth trends by month
+                sequelize.query(`
+                    SELECT
+                        TO_CHAR(date_trunc('month', "createdAt"), 'YYYY-MM') as month,
+                        COUNT(*) as new_products,
+                        ROUND(AVG(price), 2) as avg_price
+                    FROM "Mice"
+                    WHERE "createdAt" >= NOW() - INTERVAL '12 months'
+                    GROUP BY date_trunc('month', "createdAt")
+                    ORDER BY month
+                `, {
+                    transaction: t,
+                    type: sequelize.QueryTypes.SELECT
+                }),
+
+                // Detailed category insights
+                sequelize.query(`
+                    WITH CategoryStats AS (
+                        SELECT
+                            c.id,
+                            c.name,
+                            COUNT(DISTINCT mc."MouseId") as product_count,
+                            ROUND(AVG(m.price), 2) as avg_price,
+                            MIN(m.price) as min_price,
+                            MAX(m.price) as max_price,
+                            PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY m.price) as median_price
+                        FROM "Categories" c
+                        JOIN "MouseCategories" mc ON c.id = mc."CategoryId"
+                        JOIN "Mice" m ON mc."MouseId" = m.id
+                        GROUP BY c.id, c.name
+                    )
+                    SELECT
+                        product_count_range,
+                        COUNT(*) as category_count,
+                        ROUND(AVG(avg_price), 2) as avg_category_price
+                    FROM (
+                        SELECT
+                            CASE
+                                WHEN product_count < 10 THEN 'Low (< 10)'
+                                WHEN product_count BETWEEN 10 AND 50 THEN 'Medium (10-50)'
+                                WHEN product_count BETWEEN 51 AND 100 THEN 'High (51-100)'
+                                ELSE 'Very High (> 100)'
+                            END as product_count_range,
+                            avg_price
+                        FROM CategoryStats
+                    ) as ranged_stats
+                    GROUP BY product_count_range
+                    ORDER BY MIN(CASE
+                        WHEN product_count_range = 'Low (< 10)' THEN 1
+                        WHEN product_count_range = 'Medium (10-50)' THEN 2
+                        WHEN product_count_range = 'High (51-100)' THEN 3
+                        ELSE 4
+                    END)
+                `, {
+                    transaction: t,
+                    type: sequelize.QueryTypes.SELECT
+                })
+            ]);
+
+            return {
+                priceDistribution,
+                topCategories,
+                growthTrends,
+                categoryInsights
+            };
+        });
+
+        console.timeEnd('stats-query');
+        res.json(result);
+
+    } catch (error) {
+        console.error('Error generating statistics:', error);
+        res.status(500).json({ error: 'Failed to generate statistics' });
+    }
+});
 
 module.exports = app;

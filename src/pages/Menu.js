@@ -7,6 +7,7 @@ import '../styles/Menu.css';
 function Menu({ testMode = false }) {
     const [mice, setMice] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const [maxPrice, setMaxPrice] = useState('');
     const [minPrice, setMinPrice] = useState('');
     const [sortOrder, setSortOrder] = useState('');
@@ -22,6 +23,7 @@ function Menu({ testMode = false }) {
     const [totalPages, setTotalPages] = useState(1);
 
     const isMounted = useRef(true);
+    const wsRef = useRef(null);
     const BASE_URL = `http://${window.location.hostname}:5002`;
 
     useEffect(() => {
@@ -44,13 +46,17 @@ function Menu({ testMode = false }) {
     const fetchPaginatedMice = useCallback(async () => {
         if (testMode || !isMounted.current) return;
 
-        if (isMounted.current) setLoading(true);
+        if (isMounted.current) {
+            setLoading(true);
+            setError(null);
+        }
 
         try {
             if (isOfflineMode) {
                 let storedMice = [];
                 try {
                     storedMice = JSON.parse(localStorage.getItem('cachedMice') || '[]');
+                    storedMice = storedMice.filter(m => m && m.id);
                 } catch (err) {
                     console.error('Error parsing cached mice:', err);
                 }
@@ -77,11 +83,12 @@ function Menu({ testMode = false }) {
                 if (isMounted.current) {
                     setMice(paginatedResults);
                     setTotalCount(filtered.length);
-                    setTotalPages(Math.ceil(filtered.length / pageSize) || 1);
+                    setTotalPages(Math.max(1, Math.ceil(filtered.length / pageSize)));
                 }
                 return;
             }
 
+            // Online mode - fetch from API
             const params = new URLSearchParams();
             params.append('page', page);
             params.append('pageSize', pageSize);
@@ -96,11 +103,16 @@ function Menu({ testMode = false }) {
 
             const data = await response.json();
 
-            if (isMounted.current) {
-                setMice(data.mice || []);
-                setTotalCount(data.totalCount || 0);
-                setTotalPages(data.totalPages || 1);
+            if (!isMounted.current) return;
+
+            // Check if we have the expected data structure
+            if (!data || !Array.isArray(data.mice)) {
+                throw new Error('Invalid data structure received from server');
             }
+
+            setMice(data.mice.filter(m => m && m.id));
+            setTotalCount(data.totalCount || 0);
+            setTotalPages(Math.max(1, Math.ceil((data.totalCount || 0) / pageSize)));
 
             // Cache first page results for offline use
             if (page === 1) {
@@ -112,15 +124,18 @@ function Menu({ testMode = false }) {
             }
         } catch (error) {
             console.error('Error fetching mice:', error);
+            if (isMounted.current) {
+                setError(`Failed to load data. ${error.message}`);
+            }
+
             // Try to load from cache in case of error
             if (page === 1) {
-                let storedMice = [];
                 try {
-                    storedMice = JSON.parse(localStorage.getItem('cachedMice') || '[]');
+                    const storedMice = JSON.parse(localStorage.getItem('cachedMice') || '[]');
                     if (storedMice.length > 0 && isMounted.current) {
                         setMice(storedMice);
                         setTotalCount(storedMice.length);
-                        setTotalPages(Math.ceil(storedMice.length / pageSize) || 1);
+                        setTotalPages(Math.max(1, Math.ceil(storedMice.length / pageSize)));
                     }
                 } catch (err) {
                     console.error('Error parsing cached mice:', err);
@@ -136,22 +151,40 @@ function Menu({ testMode = false }) {
     }, [page, pageSize, debouncedMinPrice, debouncedMaxPrice, sortOrder, fetchPaginatedMice]);
 
     useEffect(() => {
-        const ws = new WebSocket(`ws://${window.location.hostname}:5002`);
-        ws.onmessage = (event) => {
-            try {
-                const message = JSON.parse(event.data);
-                if (message.type === 'NEW_MOUSE' || message.type === 'UPDATED_MOUSE' || message.type === 'DELETED_MOUSE') {
-                    // Refresh current page when data changes
-                    fetchPaginatedMice();
+        // Clean up existing WebSocket
+        if (wsRef.current) {
+            wsRef.current.close();
+            wsRef.current = null;
+        }
+
+        if (isOfflineMode || testMode) return;
+
+        try {
+            wsRef.current = new WebSocket(`ws://${window.location.hostname}:5002`);
+
+            wsRef.current.onmessage = (event) => {
+                try {
+                    const message = JSON.parse(event.data);
+                    if (message.type === 'NEW_MOUSE' || message.type === 'UPDATED_MOUSE' || message.type === 'DELETED_MOUSE') {
+                        // Refresh current page when data changes, but throttle to avoid too many refreshes
+                        fetchPaginatedMice();
+                    }
+                } catch (error) {
+                    console.error('Error processing WebSocket message:', error);
                 }
-            } catch (error) {
-                console.error('Error processing WebSocket message:', error);
+            };
+        } catch (error) {
+            console.error('Error setting up WebSocket:', error);
+        }
+
+        // Cleanup function
+        return () => {
+            if (wsRef.current) {
+                wsRef.current.close();
+                wsRef.current = null;
             }
         };
-        return () => {
-            ws.close();
-        };
-    }, [fetchPaginatedMice]);
+    }, [fetchPaginatedMice, isOfflineMode, testMode]);
 
     const resetFilters = () => {
         setPage(1);
@@ -173,7 +206,9 @@ function Menu({ testMode = false }) {
     };
 
     const handlePageChange = (newPage) => {
-        setPage(newPage);
+        if (newPage >= 1 && newPage <= totalPages) {
+            setPage(newPage);
+        }
     };
 
     const handlePageSizeChange = (e) => {
@@ -188,12 +223,22 @@ function Menu({ testMode = false }) {
     return (
         <div className="menu">
             <StatusIndicator isOnline={isOnline} isServerUp={isServerUp} />
+
             {isOfflineMode && (
                 <div className="offline-alert">
                     <p>Currently working in offline mode. Changes will sync when connection is restored.</p>
                 </div>
             )}
+
+            {error && (
+                <div className="error-alert">
+                    <p>{error}</p>
+                    <button onClick={() => fetchPaginatedMice()}>Retry</button>
+                </div>
+            )}
+
             <h1 className="menuTitle">Our Gaming Mice</h1>
+
             <div className="filters">
                 <label>
                     Min Price:
@@ -225,31 +270,11 @@ function Menu({ testMode = false }) {
 
             {/* Pagination controls */}
             <div className="pagination-controls">
-                <button
-                    onClick={() => handlePageChange(1)}
-                    disabled={page === 1 || loading}
-                >
-                    First
-                </button>
-                <button
-                    onClick={() => handlePageChange(page - 1)}
-                    disabled={page === 1 || loading}
-                >
-                    Previous
-                </button>
+                <button onClick={() => handlePageChange(1)} disabled={page === 1 || loading}>First</button>
+                <button onClick={() => handlePageChange(page - 1)} disabled={page === 1 || loading}>Previous</button>
                 <span>Page {page} of {totalPages}</span>
-                <button
-                    onClick={() => handlePageChange(page + 1)}
-                    disabled={page === totalPages || loading}
-                >
-                    Next
-                </button>
-                <button
-                    onClick={() => handlePageChange(totalPages)}
-                    disabled={page === totalPages || loading}
-                >
-                    Last
-                </button>
+                <button onClick={() => handlePageChange(page + 1)} disabled={page === totalPages || loading}>Next</button>
+                <button onClick={() => handlePageChange(totalPages)} disabled={page === totalPages || loading}>Last</button>
                 <select value={pageSize} onChange={handlePageSizeChange} disabled={loading}>
                     <option value={12}>12 per page</option>
                     <option value={24}>24 per page</option>
@@ -259,18 +284,17 @@ function Menu({ testMode = false }) {
 
             <div className="menuList">
                 {mice.length > 0 ? (
-                    mice.map((menuItem, index) => {
-                        if (!menuItem) return null;
+                    mice.map((mouse) => {
+                        if (!mouse) return null;
                         return (
-                            <div key={menuItem.id || menuItem._id || `menu-${index}`}>
-                                <MenuItem
-                                    id={menuItem.id || menuItem._id}
-                                    image={menuItem.image || '/assets/default-mouse.png'}
-                                    name={menuItem.name || 'Unnamed Mouse'}
-                                    price={parseFloat(menuItem.price) || 0}
-                                    details={menuItem.details || 'No details available'}
-                                />
-                            </div>
+                            <MenuItem
+                                key={mouse.id || `mouse-${Math.random()}`}
+                                id={mouse.id}
+                                image={mouse.image || '/assets/default-mouse.png'}
+                                name={mouse.name || 'Unnamed Mouse'}
+                                price={parseFloat(mouse.price) || 0}
+                                details={mouse.details || 'No details available'}
+                            />
                         );
                     })
                 ) : (
@@ -282,31 +306,11 @@ function Menu({ testMode = false }) {
 
             {/* Duplicate pagination controls at the bottom for better UX */}
             <div className="pagination-controls">
-                <button
-                    onClick={() => handlePageChange(1)}
-                    disabled={page === 1 || loading}
-                >
-                    First
-                </button>
-                <button
-                    onClick={() => handlePageChange(page - 1)}
-                    disabled={page === 1 || loading}
-                >
-                    Previous
-                </button>
+                <button onClick={() => handlePageChange(1)} disabled={page === 1 || loading}>First</button>
+                <button onClick={() => handlePageChange(page - 1)} disabled={page === 1 || loading}>Previous</button>
                 <span>Page {page} of {totalPages} (Total: {totalCount} items)</span>
-                <button
-                    onClick={() => handlePageChange(page + 1)}
-                    disabled={page === totalPages || loading}
-                >
-                    Next
-                </button>
-                <button
-                    onClick={() => handlePageChange(totalPages)}
-                    disabled={page === totalPages || loading}
-                >
-                    Last
-                </button>
+                <button onClick={() => handlePageChange(page + 1)} disabled={page === totalPages || loading}>Next</button>
+                <button onClick={() => handlePageChange(totalPages)} disabled={page === totalPages || loading}>Last</button>
             </div>
         </div>
     );
