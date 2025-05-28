@@ -1,0 +1,606 @@
+CREATE DATABASE DogDaycareCentre
+go
+USE DogDaycareCentre
+go
+
+
+-- CREATE TABLES
+CREATE TABLE DogOwner
+(
+Oid INT PRIMARY KEY IDENTITY(1,1) NOT NULL,
+OwnerName VARCHAR(100) NOT NULL,
+Phone VARCHAR(10) NOT NULL
+)
+
+CREATE TABLE FoodTypes
+(
+Fid INT PRIMARY KEY IDENTITY(1,1) NOT NULL,
+FoodName VARCHAR(100) NOT NULL
+)
+
+CREATE TABLE Employees
+(
+Eid INT PRIMARY KEY IDENTITY(1,1) NOT NULL,
+EmployeeName VARCHAR(100) NOT NULL,
+Phone VARCHAR(10)
+)
+
+CREATE TABLE Dogs
+(
+Did INT PRIMARY KEY IDENTITY(1,1) NOT NULL,
+DogName varchar(100) NOT NULL,
+DateOfBirth Date NOT NULL,
+Fid INT FOREIGN KEY REFERENCES FoodTypes(Fid),
+Eid INT FOREIGN KEY REFERENCES Employees(Eid)
+)
+
+CREATE TABLE DogAndOwners
+(
+Did INT FOREIGN KEY REFERENCES Dogs(Did) NOT NULL,
+Oid INT FOREIGN KEY REFERENCES DogOwner(Oid) NOT NULL,
+CONSTRAINT pk_Dogs PRIMARY KEY (Did, Oid)
+)
+
+CREATE TABLE DogProfile
+(
+ProfileId INT PRIMARY KEY IDENTITY(1,1) NOT NULL,
+Did INT FOREIGN KEY REFERENCES Dogs(Did),
+Descr TEXT,
+MedicalHistory TEXT
+)
+
+CREATE TABLE Appointments
+(
+Aid INT PRIMARY KEY IDENTITY(1,1) NOT NULL,
+Did INT FOREIGN KEY REFERENCES Dogs(Did),
+AppDate DATE,
+CheckIn DATETIME,
+CheckOut DATETIME
+)
+
+
+-------------
+-- INSERT values
+INSERT INTO DogOwner(OwnerName, Phone)
+VALUES
+('John Black', '0724085304'),
+('Maria Filip', '0755422369'),
+('George Grass', '0754523997'),
+('Francesca Vanesa','0744896721'),
+('Olimpia Jack', '0788963123');
+
+INSERT INTO FoodTypes(FoodName)
+VALUES
+('Chicken Delight'),
+('Beef Stew'), 
+('Salmon Supreme'), 
+('Turkey Feast'),
+('Lamb & Rice'),
+('Venison Feast'),
+('Duck Delight'),
+('Pork & Sweet Potato'),
+('Vegetable Medley')
+
+INSERT INTO Employees(EmployeeName, Phone)
+VALUES
+('Georgia Jinny', '0788596312'),
+('Bill Rollie', '0722569879'),
+('Anna Stone', '0746462622'),
+('Patrick David', '0721268432'),
+('Yuri Seed', '0757897467'),
+('Tudd Day', '0757896312')
+
+INSERT INTO Dogs(DogName, DateOfBirth, Fid, Eid)
+VALUES 
+('Biggy', '2018-10-10' , 6, 3),
+('Donald', '2020-03-15', 4, 5),
+('Doug', '2015-08-21', 9, 2),
+('Lila', '2014-09-23', 5, 5),
+('Bean', '2016-05-17', 1, 6),
+('Rorry', '2020-04-05', 3, 1),
+('Tana', '2023-01-25', 9, 3),
+('Minno', '2024-02-23', 4, 4),
+('Dino', '2015-10-10', 7, 1),
+('Boomer', '2016-04-20', 8, 6)
+
+INSERT INTO Appointments(Did, AppDate, CheckIn, CheckOut)
+VALUES
+(7, '2024-01-15', '2024-01-15 09:30:00', '2024-01-15 15:44:41'),
+(3, '2024-02-27', '2024-02-27 12:12:34', '2024-02-28 18:23:33'),
+(10,'2024-03-11', '2024-03-11 11:00:02', '2024-03-11 15:14:25'),
+(1,'2024-04-05' , '2024-04-05 15:28:06', '2024-04-05 19:25:29'),
+(4,'2024-05-16', '2024-05-16 11:18:19', '2024-05-16 20:24:39'),
+(6,'2024-06-23', '2024-06-23 07:01:04', '2024-06-24 22:07:55'),
+(9,'2024-06-14', '2024-06-14 10:17:17 ', '2024-06-14 19:18:34'),
+(2,'2024-11-11', '2024-11-11 14:14:14', '2024-11-11 18:19:33'),
+(8,'2024-11-30', '2024-11-30 15:15:27', '2024-11-30 21:39:37'),
+(5,'2024-05-21', '2024-05-21 17:18:03', '2024-05-23 22:45:41'),
+(3,'2024-09-05', '2024-09-05 11:06:18', '2024-09-05 16:45:07'),
+(6,'2014-05-16', '2014-05-16 10:16:59', '2014-05-16 17:23:09')
+
+INSERT INTO DogAndOwners(Did, Oid)
+VALUES
+(5, 1),
+(5,2),
+(4,3),
+(3,3),
+(1, 5),
+(2,4),
+(6,4),
+(7,5),
+(8,5),
+(9,1),
+(10,3)
+
+
+
+
+----------------
+-- SELECT
+SELECT * FROM Dogs
+SELECT * from DogOwner
+SELECT * FROM FoodTypes
+SELECT * FROM Employees
+SELECT * FROM Appointments
+SELECT * FROM DogAndOwners
+
+
+---------
+-- NOT: all dogs who are not assigned to the employee with id 2 and who don't have the food type with id 2
+SELECT DogName
+FROM Dogs
+WHERE NOT (Eid = 2 OR Fid = 1);
+
+----------------------
+-- DELETE
+DELETE FROM Appointments
+WHERE AppDate IN ('2024-05-16','2024-09-05')
+
+
+
+---------------
+-- UPDATE + AND 
+UPDATE Dogs
+SET DogName='Tia'
+WHERE DogName LIKE 'T%' AND Fid > 5
+
+
+--------------
+-- UNION all food types that are not assigned or are assigned to dogs with upcoming appointments
+SELECT f.FoodName AS FoodType, 'Unassigned' AS Status
+FROM FoodTypes f
+LEFT JOIN Dogs d ON f.Fid = d.Fid
+WHERE d.Did IS NULL
+
+UNION
+
+SELECT f.FoodName AS FoodType, 'Upcoming Appointment' AS Status
+FROM FoodTypes f
+INNER JOIN Dogs d ON f.Fid = d.Fid
+INNER JOIN Appointments a ON d.Did = a.Did
+WHERE a.AppDate > GETDATE()
+ORDER BY FoodType;
+
+
+---------------
+-- INTERSECT and DISTINCT: list all distinct dogs that are assigned to a specific food type and have upcoming appointments
+SELECT DISTINCT d.DogName
+FROM Dogs d
+INNER JOIN FoodTypes f ON d.Fid = f.Fid
+WHERE f.FoodName ='Turkey Feast'
+
+INTERSECT
+
+SELECT DISTINCT d.DogName
+FROM Dogs d
+INNER JOIN Appointments a ON d.Did = a.Did
+WHERE a.AppDate > GETDATE();
+
+
+
+----------------
+-- EXCEPT all dogs that are not assigned to the food types "Chicken Delight" or "Beef Stew"
+SELECT DogName
+FROM Dogs
+
+EXCEPT
+
+SELECT d.DogName
+FROM Dogs d
+INNER JOIN FoodTypes f ON d.Fid = f.Fid
+WHERE f.FoodName IN ('Chicken Delight', 'Beef Stew');
+
+
+
+-------------
+-- LEFT JOIN: all employees and the dogs that take care after
+SELECT 
+    e.EmployeeName AS Employee_Name,
+    d.DogName AS Dog_Name
+FROM 
+    Employees e
+LEFT JOIN 
+    Dogs d ON e.Eid = d.Eid
+ORDER BY 
+    e.EmployeeName ASC;
+
+
+
+--------------
+-- INNER JOIN: all dogs and their owners
+SELECT d.DogName, o.OwnerName
+FROM Dogs d
+INNER JOIN DogAndOwners da ON d.Did = da.Did
+INNER JOIN DogOwner o ON da.Oid = o.Oid
+ORDER BY d.DogName ASC, o.OwnerName ASC;
+
+
+
+----------------
+-- RIGHT JOIN: all dogs and their appointments
+SELECT d.DogName, a.AppDate, a.CheckIn, a.CheckOut
+FROM Dogs d
+RIGHT JOIN Appointments a ON d.Did = a.Did
+ORDER BY d.DogName;
+
+
+
+--------------
+--FULL JOIN: all food types and their corresponding dogs
+SELECT 
+    f.FoodName, d.DogName
+FROM 
+    FoodTypes f
+FULL JOIN 
+    Dogs d ON f.Fid = d.Fid
+ORDER BY 
+    f.FoodName;
+
+
+-------------------
+-- INNER JOIN + AND + 3 TABLES: all dogs with upcoming appointments and name starting with 'D' and their owners
+SELECT d.DogName, o.OwnerName, a.AppDate
+FROM Dogs d
+INNER JOIN Appointments a ON d.Did = a.Did
+INNER JOIN DogAndOwners da ON d.Did = da.Did
+INNER JOIN DogOwner o ON da.Oid = o.Oid
+WHERE a.AppDate > GETDATE() AND d.DogName LIKE 'D%'
+ORDER BY a.AppDate;
+
+-------------------
+-- IN: all dogs whose assigned food type is also assigned to other dogs
+SELECT DogName
+FROM Dogs
+WHERE Fid IN (
+    SELECT Fid
+    FROM Dogs
+    GROUP BY Fid
+    HAVING COUNT(Did) > 1
+);
+
+
+-------------------------
+--EXISTS, subquery in the WHERE: all dogs that have more than one owner 
+SELECT DogName
+FROM Dogs d
+WHERE EXISTS (
+    SELECT 1
+    FROM DogAndOwners da
+    WHERE da.Did = d.Did
+    GROUP BY da.Did
+    HAVING COUNT(da.Oid) > 1
+);
+
+
+
+------------------
+-- subquery in FORM: all dogs and their number of owners for each
+SELECT d.DogName, OwnersCount.NumOwners
+FROM Dogs d
+INNER JOIN (
+    SELECT da.Did, COUNT(da.Oid) AS NumOwners
+    FROM DogAndOwners da
+    GROUP BY da.Did
+) AS OwnersCount ON d.Did = OwnersCount.Did
+ORDER BY d.DogName;
+
+
+
+-----------------
+-- GORUP BY with HAVING clause, COUNT: all food types that are assigned to more than one dog, 
+-- along with ne number of dogs assigned
+SELECT f.FoodName, COUNT(d.Did) AS DogCount
+FROM FoodTypes f
+INNER JOIN Dogs d ON f.Fid = d.Fid
+GROUP BY f.FoodName
+HAVING COUNT(d.Did) > 1;
+
+
+------------------
+-- GROUP BY using COUNT, AVG: the average number of appointments for each employee's assigned dogs
+SELECT e.EmployeeName, AVG(AppointmentCount) AS AverageAppointments
+FROM Employees e
+INNER JOIN Dogs d ON e.Eid = d.Eid
+INNER JOIN (
+    SELECT Did, COUNT(*) AS AppointmentCount
+    FROM Appointments
+    GROUP BY Did
+) AS DogAppointments ON d.Did = DogAppointments.Did
+GROUP BY e.EmployeeName;
+
+
+
+--------------------
+-- GROUP BY,COUNT, subquery in HAVING and using AVG: counts the number of appointment for each dog and 
+-- then filters the results to only show the dogs that have more appoinments than the average number 
+-- of appointments per dog
+SELECT 
+    d.DogName,
+    COUNT(a.Aid) AS AppointmentCount
+FROM 
+    Dogs d
+LEFT JOIN 
+    Appointments a ON d.Did = a.Did
+GROUP BY 
+    d.DogName
+HAVING 
+    COUNT(a.Aid) > (
+        SELECT 
+            AVG(AppointmentCount)
+        FROM (
+            SELECT 
+                Did, 
+                COUNT(Aid) AS AppointmentCount
+            FROM 
+                Appointments
+            GROUP BY 
+                Did
+        ) AS DogAppointmentCounts
+    );
+
+
+
+-------------------
+-- list all dogs and the food they are assigned to
+SELECT d.DogName, f.FoodName
+FROM Dogs d
+INNER JOIN FoodTypes f ON d.Fid = f.Fid
+ORDER BY d.DogName;
+
+
+
+-----------
+-- GROUP BY + HAVING + MAX + COUNT: food types that have the maximun number of dogs assigned to them
+-- grouped by food name + subquery in the FROM clause
+SELECT 
+    f.FoodName, COUNT(d.Did) AS DogCount
+FROM 
+    FoodTypes f
+LEFT JOIN 
+    Dogs d ON f.Fid = d.Fid
+GROUP BY 
+    f.FoodName
+HAVING 
+    COUNT(d.Did) = (
+        SELECT 
+            MAX(DogCount)
+        FROM (
+            SELECT 
+                Fid, 
+                COUNT(Did) AS DogCount
+            FROM 
+                Dogs
+            GROUP BY 
+                Fid
+        ) AS DogCounts
+    );
+
+
+
+---------------
+--TOP: top 3 dogs with the highest number of appointments, in descending order
+SELECT TOP 3 d.DogName, COUNT(a.Aid) AS AppointmentCount
+FROM Dogs d
+LEFT JOIN 
+    Appointments a ON d.Did = a.Did
+GROUP BY 
+    d.DogName
+ORDER BY 
+    AppointmentCount DESC;
+
+
+
+--------------------------------------------
+--------------------------------------------
+----------ASSIGNMENT 3----------------------
+--------------------------------------------
+--------------------------------------------
+
+----------
+-- Create version table
+
+CREATE TABLE DatabaseVersion (
+	VersionID INT PRIMARY KEY IDENTITY(1,1),
+	VersionNumber INT NOT NULL
+);
+
+--------
+--Stored procedure ADD COLUMN
+-- ADD columnn MedicalNotes in the Dogs table
+CREATE PROCEDURE Do_AddColumn
+AS 
+BEGIN
+	ALTER TABLE Dogs ADD MedicalNotes VARCHAR(250);
+	INSERT INTO DatabaseVersion (VersionNumber) VALUES (1)
+END;
+
+EXEC Do_AddColumn;
+
+
+---------
+--Stored procedure REMOVE A COLUMN 
+CREATE PROCEDURE Undo_AddColumn
+AS 
+BEGIN
+	ALTER TABLE Dogs DROP COLUMN MedicalNotes;
+	DELETE FROM DatabaseVersion WHERE VersionNumber = 1;
+END;
+
+EXEC Undo_AddColumn;
+
+
+--------------
+--Stored procedure ADD DEFAULT CONSTRAINT
+--sets the default value of FoodName as 'Unknown'
+CREATE PROCEDURE Do_AddDefaultConstraint
+AS
+BEGIN
+	ALTER TABLE FoodTypes ADD CONSTRAINT DF_FoodTypes_FoodName DEFAULT 'Unknown' FOR FoodName;
+	INSERT INTO DatabaseVersion (VersionNumber) VALUES (2);
+END;
+
+EXEC Do_AddDefaultConstraint;
+
+------------------
+--Stored procedure REMOVE DEFAULT CONSTRAINT
+CREATE PROCEDURE Undo_AddDefaultConstraint
+AS
+BEGIN
+	ALTER TABLE FoodTypes DROP CONSTRAINT DF_FoodTypes_FoodName;
+	DELETE FROM DatabaseVersion WHERE VersionNumber = 2;
+END;
+
+EXEC Undo_AddDefaultConstraint;
+
+
+
+---------
+--Stored procedure CREATE TABLE
+--creates table ActivityLog 
+CREATE PROCEDURE Do_CreateTable
+AS
+BEGIN
+	CREATE TABLE ActivityLog (
+		ActivityID INT PRIMARY KEY IDENTITY(1,1),
+		Did INT NOT NULL,
+		ActivityDate DATETIME DEFAULT GETDATE(),
+		ActivityDescription VARCHAR(250) NOT NULL
+		)
+		INSERT INTO DatabaseVersion (VersionNumber) VALUES (3);
+END;
+
+EXEC Do_CreateTable;
+
+
+
+---------
+--Stored procedure DELETE TABLE
+CREATE PROCEDURE Undo_CreateTable
+AS 
+BEGIN
+	DROP TABLE ActivityLog;
+	DELETE FROM DatabaseVersion WHERE VersionNumber = 3;
+END;
+
+EXEC Undo_CreateTable;
+
+
+----------
+--Stored procedure ADD FOREIGN KEY
+CREATE PROCEDURE Do_AddForeignKey
+AS
+BEGIN
+	ALTER TABLE ActivityLog
+	ADD CONSTRAINT FK_ActivityLog_Dogs FOREIGN KEY (Did) REFERENCES Dogs (Did);
+	INSERT INTO DatabaseVersion (VersionNumber) VALUES (4)
+END;
+
+EXEC Do_AddForeignKey;
+
+
+
+-----
+--Stored procedure REMOVE FOREIGN KEY
+CREATE PROCEDURE Undo_AddForeignKey_ActivityLog_Dogs
+AS
+BEGIN
+    ALTER TABLE ActivityLog 
+    DROP CONSTRAINT FK_ActivityLog_Dogs;
+
+    DELETE FROM DatabaseVersion WHERE VersionNumber = 4;
+END;
+
+EXEC Undo_AddForeignKey_ActivityLog_Dogs;
+
+
+---------
+--Stored procedure: transition to a specified version
+CREATE PROCEDURE SetDataBaseVersion1
+	@Version INT
+AS
+BEGIN
+	DECLARE @CurrentVersion INT;
+	SELECT @CurrentVersion = ISNULL(MAX(VersionNumber), 0) FROM DatabaseVersion;
+
+	IF @Version = @CurrentVersion
+	BEGIN
+		PRINT 'The database is already at the targeted version.';
+		RETURN;
+	END;
+
+	IF @Version < 0 OR @Version > 4
+	BEGIN 
+		PRINT 'Version must be between 0 and 4.'
+		RETURN;
+	END;
+	IF @Version = 0
+    BEGIN
+      
+        WHILE @CurrentVersion > 0
+        BEGIN
+            IF @CurrentVersion = 4 EXEC Undo_AddForeignKey_ActivityLog_Dogs;
+            ELSE IF @CurrentVersion = 3 EXEC Undo_CreateTable;
+            ELSE IF @CurrentVersion = 2 EXEC Undo_AddDefaultConstraint;
+            ELSE IF @CurrentVersion = 1 EXEC Undo_AddColumn;
+
+            SET @CurrentVersion = @CurrentVersion - 1;
+        END;
+        PRINT 'The database has been rolled back to the initial state (version 0).';
+        RETURN;
+    END;
+
+	WHILE @CurrentVersion < @Version
+	BEGIN
+		SET @CurrentVersion = @CurrentVersion + 1;
+		IF @CurrentVersion = 1 EXEC Do_AddColumn;
+		ELSE IF @CurrentVersion = 2 EXEC Do_AddDefaultConstraint;
+        ELSE IF @CurrentVersion = 3 EXEC Do_CreateTable;
+        ELSE IF @CurrentVersion = 4 EXEC Do_AddForeignKey;
+	END;
+
+	WHILE @CurrentVersion > @Version
+    BEGIN
+        IF @CurrentVersion = 4 EXEC Undo_AddForeignKey_ActivityLog_Dogs;
+        ELSE IF @CurrentVersion = 3 EXEC Undo_CreateTable;
+        ELSE IF @CurrentVersion = 2 EXEC Undo_AddDefaultConstraint;
+        ELSE IF @CurrentVersion = 1 EXEC Undo_AddColumn;
+        SET @CurrentVersion = @CurrentVersion - 1;
+    END
+END;
+
+select* from Dogs
+EXEC SetDatabaseVersion1 @Version = 0;
+EXEC SetDatabaseVersion1 @Version = 1;
+EXEC SetDatabaseVersion1 @Version = 4; 
+EXEC SetDatabaseVersion1 @Version = 2; 
+EXEC SetDataBaseVersion1 @Version = 3;
+EXEC SetDatabaseVersion1 @Version = 1230112; 
+
+SELECT * FROM DatabaseVersion;
+
+
+SELECT * from ActivityLog;
+
+
+
+
