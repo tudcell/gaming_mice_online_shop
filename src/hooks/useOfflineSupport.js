@@ -24,7 +24,7 @@ function useOfflineSupport() {
         };
     }, []);
 
-    // Check server status
+    // Check server status using /api/health
     useEffect(() => {
         const checkServer = async () => {
             if (!isOnline) {
@@ -33,7 +33,7 @@ function useOfflineSupport() {
             }
 
             try {
-                const response = await fetch(`${API_BASE}/api/mice`, { method: 'HEAD' });
+                const response = await fetch(`${API_BASE}/api/health`);
                 setIsServerUp(response.ok);
             } catch {
                 setIsServerUp(false);

@@ -555,6 +555,11 @@ if (require.main === module) {
 }
 
 
+app.get('/api/health', (req, res) => {
+    res.status(200).json({ status: 'ok' });
+});
+
+
 // Complex statistics endpoint with optimized performance
 app.get('/api/statistics', async (req, res) => {
     try {
