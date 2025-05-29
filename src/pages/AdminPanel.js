@@ -312,9 +312,9 @@ function AdminPanel() {
     return (
         <div className="admin-panel">
             <h1>Admin Panel</h1>
-            <button onClick={toggleGeneration} disabled={loading}>
-                {genRunning ? 'Stop Generation' : 'Start Generation'}
-            </button>
+            {/*<button onClick={toggleGeneration} disabled={loading}>*/}
+            {/*    {genRunning ? 'Stop Generation' : 'Start Generation'}*/}
+            {/*</button>*/}
             {isOffline && (
                 <div className="network-warning">
                     Network/Server is down.
